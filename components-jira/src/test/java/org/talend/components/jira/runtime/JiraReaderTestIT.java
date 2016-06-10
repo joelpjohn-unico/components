@@ -109,6 +109,8 @@ public class JiraReaderTestIT {
      * 
      * @throws IOException in case of any exception
      */
+    // For now, it is ignored, because Jira docker image doesn't contain public projects and it can't be launched with other tests,
+    // because http library stores user token
     @Ignore
     @Test
     public void testAnonymousUser() throws IOException {

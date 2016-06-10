@@ -40,7 +40,7 @@ public class JiraSourceOrSinkTestIT {
     /**
      * Incorrect host and port
      */
-    private static final String INCORRECT_HOST_PORT = "http://incorrecthost.com/";
+    private static final String INCORRECT_HOST_PORT = "http://incorrecthost.com";
 
     /**
      * {@link ComponentProperties} for {@link JiraSourceOrSink}
@@ -90,6 +90,9 @@ public class JiraSourceOrSinkTestIT {
     @Ignore
     @Test
     public void testValidateError() {
+        String expectedMessage = "Host validation failed for URL: " + INCORRECT_HOST_PORT + System.lineSeparator() +
+                "Exception during connection: " + INCORRECT_HOST_PORT.replace("http://", "");
+        
         JiraSourceOrSink sourceOrSink = new JiraSourceOrSink();
         outputProperties.connection.hostUrl.setValue(INCORRECT_HOST_PORT);
         sourceOrSink.initialize(null, outputProperties);
@@ -99,7 +102,7 @@ public class JiraSourceOrSinkTestIT {
         String actualMessage = result.getMessage();
 
         assertEquals(Result.ERROR, actualStatus);
-        assertEquals("Wrong host URL: " + INCORRECT_HOST_PORT + " or host is unreachable", actualMessage);
+        assertEquals(expectedMessage, actualMessage);
     }
 
 }
