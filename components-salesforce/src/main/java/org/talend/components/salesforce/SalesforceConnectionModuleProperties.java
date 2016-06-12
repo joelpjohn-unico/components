@@ -12,6 +12,8 @@
 // ============================================================================
 package org.talend.components.salesforce;
 
+import static org.talend.daikon.properties.property.PropertyFactory.newString;
+
 import org.apache.avro.Schema;
 import org.talend.components.api.component.Connector;
 import org.talend.components.api.component.PropertyPathConnector;
@@ -32,6 +34,8 @@ public abstract class SalesforceConnectionModuleProperties extends FixedConnecto
     public static final String NB_LINE_NAME = "NB_LINE";
 
     public Property<Integer> NB_LINE = PropertyFactory.newInteger(NB_LINE_NAME);
+    
+    public Property ERROR_MESSAGE;
 
     public SalesforceConnectionProperties connection = new SalesforceConnectionProperties("connection"); //$NON-NLS-1$
 
@@ -47,14 +51,11 @@ public abstract class SalesforceConnectionModuleProperties extends FixedConnecto
     public void setupProperties() {
         super.setupProperties();
         NB_LINE = ComponentPropertyFactory.newReturnProperty(getReturns(), NB_LINE);
+        ERROR_MESSAGE = ComponentPropertyFactory.newReturnProperty(getReturns(), newString(SalesforceConnectionProperties.ERROR_MESSAGE_NAME));
+        
         // Allow for subclassing
         module = new SalesforceModuleProperties("module");
         module.connection = connection;
-    }
-
-    @Override
-    public Property getReturns() {
-        return connection.getReturns();
     }
 
     public Schema getSchema() {

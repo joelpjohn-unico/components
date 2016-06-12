@@ -44,6 +44,8 @@ public class TSalesforceGetServerTimestampProperties extends FixedConnectorsComp
     public static final String NB_LINE_NAME = "NB_LINE";
 
     public Property<Integer> NB_LINE = PropertyFactory.newInteger(NB_LINE_NAME);
+    
+    public Property ERROR_MESSAGE;
 
     public TSalesforceGetServerTimestampProperties(String name) {
         super(name);
@@ -59,11 +61,7 @@ public class TSalesforceGetServerTimestampProperties extends FixedConnectorsComp
         schema.schema.setValue(s);
 
         NB_LINE = ComponentPropertyFactory.newReturnProperty(getReturns(), NB_LINE);
-    }
-
-    @Override
-    public Property getReturns() {
-        return connection.getReturns();
+        ERROR_MESSAGE = ComponentPropertyFactory.newReturnProperty(getReturns(), PropertyFactory.newString(SalesforceConnectionProperties.ERROR_MESSAGE_NAME));
     }
 
     @Override
