@@ -12,17 +12,24 @@
 // ============================================================================
 package org.talend.components.api;
 
+import javax.inject.Inject;
+
+import org.junit.Before;
 import org.junit.runner.RunWith;
 import org.ops4j.pax.exam.Configuration;
 import org.ops4j.pax.exam.Option;
 import org.ops4j.pax.exam.junit.PaxExam;
 import org.ops4j.pax.exam.spi.reactors.ExamReactorStrategy;
 import org.ops4j.pax.exam.spi.reactors.PerClass;
-import org.talend.components.common.serialize.ComponentsSerializeTest;
+import org.talend.components.api.service.ComponentService;
+import org.talend.components.common.ProxyPropertiesTest;
 
 @RunWith(PaxExam.class)
 @ExamReactorStrategy(PerClass.class)
-public class ComponentCommonTestIT extends ComponentsSerializeTest {
+public class ComponentCommonSerializeTestIT extends ProxyPropertiesTest {
+
+    @Inject
+    ComponentService osgiCompService;
 
     @Configuration
     public Option[] config() {
@@ -31,6 +38,11 @@ public class ComponentCommonTestIT extends ComponentsSerializeTest {
         // these debug option do not work, I still don't know how to debug this :, cleanCaches(),
         // vmOption("-Xrunjdwp:transport=dt_socket,server=y,suspend=y,address=5005")
         // , systemTimeout(0)
+    }
+
+    @Before
+    public void setypComponentService() {
+        componentService = osgiCompService;
     }
 
 }
