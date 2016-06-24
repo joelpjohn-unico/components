@@ -28,6 +28,11 @@ public final class JiraTestConstants {
      * Jira server user id
      */
     public static final String USER = "root";
+    
+    /**
+     * Jira server wrong user id
+     */
+    public static final String WRONG_USER = "wrongUser";
 
     /**
      * Empty user constant
