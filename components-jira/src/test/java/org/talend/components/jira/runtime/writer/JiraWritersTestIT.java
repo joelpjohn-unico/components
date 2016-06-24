@@ -12,6 +12,9 @@
 // ============================================================================
 package org.talend.components.jira.runtime.writer;
 
+import static org.talend.components.jira.testutils.JiraTestConstants.HOST_PORT;
+import static org.talend.components.jira.testutils.JiraTestConstants.PASS;
+import static org.talend.components.jira.testutils.JiraTestConstants.USER;
 import static org.talend.daikon.avro.SchemaConstants.TALEND_IS_LOCKED;
 
 import java.io.IOException;
@@ -46,15 +49,6 @@ import org.talend.daikon.avro.AvroRegistry;
 public class JiraWritersTestIT {
 
     private static final Logger LOG = LoggerFactory.getLogger(JiraWritersTestIT.class);
-
-    /**
-     * Constants, which describes values to connect real Jira server
-     */
-    private static final String HOST = "http://192.168.99.100:8080/";
-
-    private static final String USER = "root";
-
-    private static final String PASS = "123456";
 
     /**
      * Instance used in this test
@@ -263,7 +257,7 @@ public class JiraWritersTestIT {
     private void setupProperties() {
         properties = new TJiraOutputProperties("root");
         properties.init();
-        properties.connection.hostUrl.setValue(HOST);
+        properties.connection.hostUrl.setValue(HOST_PORT);
         properties.connection.basicAuthentication.userId.setValue(USER);
         properties.connection.basicAuthentication.password.setValue(PASS);
         properties.resource.setValue(Resource.PROJECT);
