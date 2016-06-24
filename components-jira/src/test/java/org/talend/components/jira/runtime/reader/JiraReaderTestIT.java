@@ -10,7 +10,7 @@
 // 9 rue Pages 92150 Suresnes, France
 //
 // ============================================================================
-package org.talend.components.jira.runtime;
+package org.talend.components.jira.runtime.reader;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
@@ -31,6 +31,7 @@ import org.talend.components.api.container.RuntimeContainer;
 import org.talend.components.api.service.ComponentService;
 import org.talend.components.api.service.internal.ComponentServiceImpl;
 import org.talend.components.api.test.SimpleComponentRegistry;
+import org.talend.components.jira.runtime.JiraSource;
 import org.talend.components.jira.runtime.reader.JiraProjectIdReader;
 import org.talend.components.jira.runtime.reader.JiraProjectsReader;
 import org.talend.components.jira.runtime.reader.JiraReader;
