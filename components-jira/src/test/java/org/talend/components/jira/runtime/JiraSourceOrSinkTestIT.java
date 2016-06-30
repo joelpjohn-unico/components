@@ -13,6 +13,8 @@
 package org.talend.components.jira.runtime;
 
 import static org.junit.Assert.assertEquals;
+import static org.talend.components.jira.testutils.JiraTestConstants.HOST_PORT;
+import static org.talend.components.jira.testutils.JiraTestConstants.INCORRECT_HOST_PORT;
 
 import org.apache.avro.Schema;
 import org.junit.Before;
@@ -32,16 +34,6 @@ import org.talend.daikon.properties.ValidationResult.Result;
 public class JiraSourceOrSinkTestIT {
 
     /**
-     * Jira server host and port
-     */
-    private static final String CORRECT_HOST_PORT = "http://192.168.99.100:8080/";
-
-    /**
-     * Incorrect host and port
-     */
-    private static final String INCORRECT_HOST_PORT = "http://incorrecthost.com";
-
-    /**
      * {@link ComponentProperties} for {@link JiraSourceOrSink}
      */
     private TJiraOutputProperties outputProperties;
@@ -57,7 +49,7 @@ public class JiraSourceOrSinkTestIT {
     @Before
     public void setUp() {
         outputProperties = new TJiraOutputProperties("root");
-        outputProperties.connection.hostUrl.setValue(CORRECT_HOST_PORT);
+        outputProperties.connection.hostUrl.setValue(HOST_PORT);
         outputProperties.connection.basicAuthentication.userId.setValue("userIdValue");
         outputProperties.connection.basicAuthentication.password.setValue("passwordValue");
         outputProperties.resource.setValue(Resource.ISSUE);
@@ -109,11 +101,11 @@ public class JiraSourceOrSinkTestIT {
      */
     @Test
     public void testValidateWrongStatus() {
-        String expectedMessage = "Host validation failed for URL: " + CORRECT_HOST_PORT + "index.html" + System.lineSeparator() +
+        String expectedMessage = "Host validation failed for URL: " + HOST_PORT + "index.html" + System.lineSeparator() +
                 "Connection is established, but status code is 404";
         
         JiraSourceOrSink sourceOrSink = new JiraSourceOrSink();
-        outputProperties.connection.hostUrl.setValue(CORRECT_HOST_PORT + "index.html");
+        outputProperties.connection.hostUrl.setValue(HOST_PORT + "index.html");
         sourceOrSink.initialize(null, outputProperties);
 
         ValidationResult result = sourceOrSink.validate(null);

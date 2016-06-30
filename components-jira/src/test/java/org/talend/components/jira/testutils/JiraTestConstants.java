@@ -22,7 +22,12 @@ public final class JiraTestConstants {
     /**
      * Jira server host and port
      */
-    public static final String HOST_PORT = "http://192.168.99.100:8080/";
+    public static final String HOST_PORT;
+    
+    /**
+     * Incorrect host and port
+     */
+    public static final String INCORRECT_HOST_PORT = "http://incorrecthost.com";
 
     /**
      * Jira server user id
@@ -43,4 +48,12 @@ public final class JiraTestConstants {
      * Jira server user id
      */
     public static final String PASS = "123456";
+    
+    /**
+     * Sets default HOST_PORT in case of running tests from IDE
+     */
+    static {
+        String systemPropertyHost = System.getProperty("jira.host");
+        HOST_PORT = systemPropertyHost != null ?  systemPropertyHost : "http://192.168.99.100:8080/";
+    }
 }

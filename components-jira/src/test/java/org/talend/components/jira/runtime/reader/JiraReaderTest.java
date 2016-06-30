@@ -13,7 +13,7 @@
 package org.talend.components.jira.runtime.reader;
 
 import static org.junit.Assert.assertEquals;
-import static org.talend.components.jira.testutils.JiraTestConstants.HOST_PORT;
+import static org.talend.components.jira.testutils.JiraTestConstants.INCORRECT_HOST_PORT;
 import static org.talend.components.jira.testutils.JiraTestConstants.PASS;
 import static org.talend.components.jira.testutils.JiraTestConstants.USER;
 
@@ -69,7 +69,7 @@ public class JiraReaderTest {
 
     private void setupProperties() {
         properties = (TJiraInputProperties) componentService.getComponentProperties(TJiraInputDefinition.COMPONENT_NAME);
-        properties.connection.hostUrl.setValue(HOST_PORT);
+        properties.connection.hostUrl.setValue(INCORRECT_HOST_PORT);
         properties.connection.basicAuthentication.userId.setValue(USER);
         properties.connection.basicAuthentication.password.setValue(PASS);
     }
