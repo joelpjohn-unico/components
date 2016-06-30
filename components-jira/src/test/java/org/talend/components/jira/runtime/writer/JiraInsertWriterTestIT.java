@@ -18,7 +18,6 @@ import static org.talend.components.jira.testutils.JiraTestConstants.WRONG_USER;
 
 import java.io.IOException;
 
-import org.junit.Ignore;
 import org.junit.Test;
 import org.talend.components.api.exception.DataRejectException;
 import org.talend.components.jira.Action;
@@ -40,7 +39,6 @@ public class JiraInsertWriterTestIT extends JiraWriterTestBase {
      * 
      * @throws IOException
      */
-    @Ignore
     @Test
     public void testWriteBadRequest() throws IOException {
         String expectedError = "Record is invalid";
@@ -63,7 +61,6 @@ public class JiraInsertWriterTestIT extends JiraWriterTestBase {
      * 
      * @throws IOException
      */
-    @Ignore
     @Test
     public void testWriteUnauthorized() throws IOException {
         changeUserTo(WRONG_USER);

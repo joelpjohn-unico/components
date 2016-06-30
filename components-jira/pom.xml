@@ -12,6 +12,7 @@
 
 	<properties>
 		<httpcomponents.version>4.5.1</httpcomponents.version>
+		<jira.port>8080</jira.port>
 	</properties>
 
 	<name>Components - Jira</name>
@@ -30,10 +31,10 @@
 	<dependencies>
 
 		<!-- APIs for all Components -->
-        <dependency>
-            <groupId>biz.aQute.bnd</groupId>
-            <artifactId>annotation</artifactId>
-        </dependency>
+		<dependency>
+			<groupId>biz.aQute.bnd</groupId>
+			<artifactId>annotation</artifactId>
+		</dependency>
 		<dependency>
 			<groupId>org.talend.components</groupId>
 			<artifactId>components-api</artifactId>
@@ -62,7 +63,7 @@
             <scope>test</scope>
         </dependency>
 		<!-- spring jar for integration tests -->
-		
+
 		<dependency>
 			<groupId>org.springframework</groupId>
 			<artifactId>spring-test</artifactId>
@@ -73,17 +74,17 @@
 			<artifactId>spring-boot-starter</artifactId>
 			<scope>test</scope>
 			<exclusions>
-      			<exclusion> 
-        			<groupId>ch.qos.logback</groupId>
-        			<artifactId>logback-classic</artifactId>
-      			</exclusion>
-      			<exclusion> 
-        			<groupId>org.slf4j</groupId>
-        			<artifactId>log4j-over-slf4j</artifactId>
-      			</exclusion>
-    		</exclusions> 
+				<exclusion>
+					<groupId>ch.qos.logback</groupId>
+					<artifactId>logback-classic</artifactId>
+				</exclusion>
+				<exclusion>
+					<groupId>org.slf4j</groupId>
+					<artifactId>log4j-over-slf4j</artifactId>
+				</exclusion>
+			</exclusions>
 		</dependency>
-		
+
 		<!-- component specific dependencies -->
 		<dependency>
 			<groupId>org.apache.httpcomponents</groupId>
@@ -110,10 +111,11 @@
 					<groupId>org.hamcrest</groupId>
 					<artifactId>hamcrest-core</artifactId>
 				</exclusion>
-			</exclusions> 
+			</exclusions>
 		</dependency>
-		
-		<!-- followings are transitive dependencies. They were added here to be embed into bundle jar by bundle plugin -->
+
+		<!-- followings are transitive dependencies. They were added here to be 
+			embed into bundle jar by bundle plugin -->
 		<dependency>
 			<groupId>org.apache.httpcomponents</groupId>
 			<artifactId>httpcore</artifactId>
@@ -149,7 +151,7 @@
 								<Bundle-Name>${project.name} lib</Bundle-Name>
 								<Include-Resource>{maven-resources},META-INF/maven/org.talend.components/components-jira/dependencies.txt=target/classes/META-INF/maven/dependencies.txt</Include-Resource>
 								<Service-Component>*</Service-Component>
-                                <Bundle-ActivationPolicy>lazy</Bundle-ActivationPolicy>
+								<Bundle-ActivationPolicy>lazy</Bundle-ActivationPolicy>
 							</instructions>
 						</configuration>
 					</execution>
@@ -189,8 +191,52 @@
 								<Import-Package>!org.joda.convert,*,aQute.bnd.annotation.component</Import-Package>
 								<Embed-Dependency>*;scope=compile|runtime;inline=false;artifactId=!components*</Embed-Dependency>
 								<Include-Resource>{maven-resources},META-INF/maven/org.talend.components/components-jira/dependencies.txt=target/classes/META-INF/maven/dependencies.txt</Include-Resource>
-                                <Bundle-ActivationPolicy>lazy</Bundle-ActivationPolicy>
+								<Bundle-ActivationPolicy>lazy</Bundle-ActivationPolicy>
 							</instructions>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
+				<groupId>io.fabric8</groupId>
+				<artifactId>docker-maven-plugin</artifactId>
+				<version>0.15.1</version>
+				<executions>
+					<execution>
+						<id>start</id>
+						<phase>pre-integration-test</phase>
+						<goals>
+							<goal>start</goal>
+						</goals>
+						<configuration>
+							<registry>registry.datapwn.com</registry>
+							<skip>${skipITs}</skip>
+							<images>
+								<image>
+									<name>igonchar/atlassian-jira:7.1.7v2</name>
+									<run>
+										<ports>
+											<port>${jira.port}:8080</port>
+										</ports>
+										<wait>
+											<http>
+												<url>http://${docker.host.address}:${jira.port}/projects/PP1/issues</url>
+											</http>
+											<time>300000</time>
+										</wait>
+									</run>
+								</image>
+							</images>
+						</configuration>
+					</execution>
+					<execution>
+						<id>stop</id>
+						<phase>post-integration-test</phase>
+						<goals>
+							<goal>stop</goal>
+						</goals>
+						<configuration>
+							<skip>${skipITs}</skip>
 						</configuration>
 					</execution>
 				</executions>

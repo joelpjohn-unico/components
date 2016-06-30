@@ -32,7 +32,6 @@ import java.util.NoSuchElementException;
 
 import org.junit.Before;
 import org.junit.BeforeClass;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -120,7 +119,6 @@ public class JiraReaderTestIT {
      * 
      * @throws IOException in case of any exception
      */
-    @Ignore
     @Test
     public void testAnonymousUser() throws IOException {
         changeUserTo(ANONYMOUS_USER);
@@ -146,7 +144,6 @@ public class JiraReaderTestIT {
      * 
      * @throws IOException in case of any exception
      */
-    @Ignore
     @Test
     public void testReadProject() throws IOException {
         String key = "TP";
@@ -172,7 +169,6 @@ public class JiraReaderTestIT {
      * 
      * @throws IOException in case of any exception
      */
-    @Ignore
     @Test
     public void testReadProjects() throws IOException {
         JiraProjectsReader jiraReader = new JiraProjectsReader(source);
@@ -199,7 +195,6 @@ public class JiraReaderTestIT {
      * 
      * @throws IOException in case of any exception
      */
-    @Ignore
     @Test
     public void testReadIssue() throws IOException {
         changeJqlTo("key=TP-1");
@@ -225,7 +220,6 @@ public class JiraReaderTestIT {
      * 
      * @throws IOException in case of any exception
      */
-    @Ignore
     @Test
     public void testReadIssues() throws IOException {
         changeJqlTo("project=TP");
@@ -251,7 +245,6 @@ public class JiraReaderTestIT {
      * 
      * @throws IOException in case of any exception
      */
-    @Ignore
     @Test(expected = NoSuchElementException.class)
     public void testGetCurrentNoMoreRecords() throws IOException {
         JiraProjectsReader jiraReader = new JiraProjectsReader(source);
@@ -277,7 +270,6 @@ public class JiraReaderTestIT {
      * 
      * @throws IOException in case of any exception
      */
-    @Ignore
     @Test
     public void testGetReturnValues() throws IOException {
         JiraProjectsReader jiraReader = new JiraProjectsReader(source);

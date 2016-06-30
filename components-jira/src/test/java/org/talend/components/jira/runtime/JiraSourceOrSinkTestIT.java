@@ -16,7 +16,6 @@ import static org.junit.Assert.assertEquals;
 
 import org.apache.avro.Schema;
 import org.junit.Before;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.talend.components.api.container.RuntimeContainer;
 import org.talend.components.api.properties.ComponentProperties;
@@ -71,7 +70,6 @@ public class JiraSourceOrSinkTestIT {
      * Checks {@link JiraSourceOrSink#validate(RuntimeContainer)} returns {@link ValidationResult.Result#OK} in case of
      * established connection
      */
-    @Ignore
     @Test
     public void testValidateOk() {
         JiraSourceOrSink sourceOrSink = new JiraSourceOrSink();
@@ -87,7 +85,6 @@ public class JiraSourceOrSinkTestIT {
      * Checks {@link JiraSourceOrSink#validate(RuntimeContainer)} returns {@link ValidationResult.Result#ERROR} and
      * {@link ValidationResult} contains correct message in case of connection wasn't established
      */
-    @Ignore
     @Test
     public void testValidateError() {
         String expectedMessage = "Host validation failed for URL: " + INCORRECT_HOST_PORT + System.lineSeparator() +
@@ -110,7 +107,6 @@ public class JiraSourceOrSinkTestIT {
      * {@link ValidationResult} contains correct message in case of connection was established, but there is no such resource
      * on server
      */
-    @Ignore
     @Test
     public void testValidateWrongStatus() {
         String expectedMessage = "Host validation failed for URL: " + CORRECT_HOST_PORT + "index.html" + System.lineSeparator() +

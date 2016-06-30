@@ -15,7 +15,6 @@ package org.talend.components.jira.runtime.writer;
 import java.io.IOException;
 
 import org.apache.avro.generic.IndexedRecord;
-import org.junit.Ignore;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ErrorCollector;
@@ -64,7 +63,6 @@ public class JiraWritersTestIT extends JiraWriterTestBase {
      * 
      * @throws IOException
      */
-    @Ignore
     @Test
     public void testWrite() throws IOException {
         // 1. Create project "Test Project"
