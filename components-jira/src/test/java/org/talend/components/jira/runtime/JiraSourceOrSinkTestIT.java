@@ -12,6 +12,8 @@
 // ============================================================================
 package org.talend.components.jira.runtime;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.junit.Assert.assertEquals;
 import static org.talend.components.jira.testutils.JiraTestConstants.HOST_PORT;
 import static org.talend.components.jira.testutils.JiraTestConstants.INCORRECT_HOST_PORT;
@@ -79,9 +81,6 @@ public class JiraSourceOrSinkTestIT {
      */
     @Test
     public void testValidateError() {
-        String expectedMessage = "Host validation failed for URL: " + INCORRECT_HOST_PORT + System.lineSeparator() +
-                "Exception during connection: java.net.UnknownHostException: " + INCORRECT_HOST_PORT.replace("http://", "");
-        
         JiraSourceOrSink sourceOrSink = new JiraSourceOrSink();
         outputProperties.connection.hostUrl.setValue(INCORRECT_HOST_PORT);
         sourceOrSink.initialize(null, outputProperties);
@@ -91,9 +90,10 @@ public class JiraSourceOrSinkTestIT {
         String actualMessage = result.getMessage();
 
         assertEquals(Result.ERROR, actualStatus);
-        assertEquals(expectedMessage, actualMessage);
+        assertThat(actualMessage, containsString("Host validation failed for URL: " + INCORRECT_HOST_PORT));
+        assertThat(actualMessage, containsString("Exception during connection: "));
     }
-    
+
     /**
      * Checks {@link JiraSourceOrSink#validate(RuntimeContainer)} returns {@link ValidationResult.Result#ERROR} and
      * {@link ValidationResult} contains correct message in case of connection was established, but there is no such resource
@@ -101,9 +101,9 @@ public class JiraSourceOrSinkTestIT {
      */
     @Test
     public void testValidateWrongStatus() {
-        String expectedMessage = "Host validation failed for URL: " + HOST_PORT + "index.html" + System.lineSeparator() +
-                "Connection is established, but status code is 404";
-        
+        String expectedMessage = "Host validation failed for URL: " + HOST_PORT + "index.html" + System.lineSeparator()
+                + "Connection is established, but status code is 404";
+
         JiraSourceOrSink sourceOrSink = new JiraSourceOrSink();
         outputProperties.connection.hostUrl.setValue(HOST_PORT + "index.html");
         sourceOrSink.initialize(null, outputProperties);
