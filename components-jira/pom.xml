@@ -12,7 +12,8 @@
 
 	<properties>
 		<httpcomponents.version>4.5.1</httpcomponents.version>
-		<jira.port>8080</jira.port>
+		<jira.port>8060</jira.port>
+		<talend_docker_registry>registry.datapwn.com</talend_docker_registry>
 	</properties>
 
 	<name>Components - Jira</name>
@@ -218,7 +219,7 @@
 							<goal>start</goal>
 						</goals>
 						<configuration>
-							<registry>registry.datapwn.com</registry>
+							<registry>${talend_docker_registry}</registry>
 							<skip>${skipITs}</skip>
 							<images>
 								<image>
