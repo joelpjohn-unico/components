@@ -173,7 +173,8 @@
 			<url>http://newbuild.talend.com:8081/nexus/content/repositories/TalendOpenSourceRelease/</url>
 		</repository>
 		<repository>
-			<id>snapshots</id>
+			<id>talend_nexus</id>
+			<name>snapshots</name>
 			<url>${talend_snapshots}</url>
 		</repository>
 	</repositories>
