@@ -12,6 +12,7 @@
 
 	<properties>
 		<httpcomponents.version>4.5.1</httpcomponents.version>
+		<talend_snapshots>http://newbuild.talend.com:8081/nexus/content/repositories/TalendOpenSourceSnapshot/</talend_snapshots>
 	</properties>
 
 	<name>Components - Jira</name>
@@ -21,10 +22,11 @@
 	<packaging>bundle</packaging>
 
 	<repositories>
-		<repository>
-			<id>snapshots</id>
-			<url>http://newbuild.talend.com:8081/nexus/content/repositories/TalendOpenSourceSnapshot/</url>
-		</repository>
+        <repository>
+            <id>talend_nexus</id>
+            <name>snapshots-branch</name>
+            <url>${talend_snapshots}</url>
+        </repository>
 	</repositories>
 
 	<dependencies>
