@@ -20,6 +20,10 @@
             <name>snapshots</name>
             <url>${talend_snapshots}</url>
         </repository>
+        <repository>
+            <id>snapshots</id>
+            <url>http://newbuild.talend.com:8081/nexus/content/repositories/TalendOpenSourceSnapshot/</url>
+        </repository>
     </repositories>
 
     <properties>

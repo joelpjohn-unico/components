@@ -24,8 +24,12 @@
 	<repositories>
         <repository>
             <id>talend_nexus</id>
-            <name>snapshots</name>
+            <name>snapshots-branch</name>
             <url>${talend_snapshots}</url>
+        </repository>
+        <repository>
+            <id>snapshots</id>
+            <url>http://newbuild.talend.com:8081/nexus/content/repositories/TalendOpenSourceSnapshot/</url>
         </repository>
 	</repositories>
 
