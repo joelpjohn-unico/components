@@ -22,8 +22,8 @@
 
 	<repositories>
         <repository>
-        	<name>snapshots</name>
             <id>talend_nexus</id>
+            <name>snapshots</name>
             <url>${talend_snapshots}</url>
         </repository>
 	</repositories>
