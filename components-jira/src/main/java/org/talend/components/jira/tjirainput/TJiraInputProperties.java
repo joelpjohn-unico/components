@@ -64,7 +64,7 @@ public class TJiraInputProperties extends JiraProperties {
     public void setupProperties() {
         super.setupProperties();
         setupSchema();
-        jql.setValue("summary ~ \\\"some word\\\" AND project=PROJECT_ID");
+        jql.setValue("\"summary ~ \\\"some word\\\" AND project=PROJECT_ID\"");
         projectId.setValue("");
         batchSize.setValue(50);
     }

@@ -90,7 +90,7 @@ public class TJiraInputPropertiesTest {
         int batchSizeValue = properties.batchSize.getValue();
 
         assertThat(resourceValue, equalTo(Resource.ISSUE));
-        assertThat(jqlValue, equalTo("summary ~ \\\"some word\\\" AND project=PROJECT_ID"));
+        assertThat(jqlValue, equalTo("\"summary ~ \\\"some word\\\" AND project=PROJECT_ID\""));
         assertThat(projectIdValue, equalTo(""));
         assertThat(batchSizeValue, equalTo(50));
     }

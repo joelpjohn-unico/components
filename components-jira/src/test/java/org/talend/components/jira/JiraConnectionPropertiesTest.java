@@ -37,7 +37,7 @@ public class JiraConnectionPropertiesTest {
         properties.setupProperties();
 
         String hostUrlValue = properties.hostUrl.getValue();
-        assertThat(hostUrlValue, equalTo("https://jira.atlassian.com"));
+        assertThat(hostUrlValue, equalTo("\"https://jira.atlassian.com\""));
     }
 
     /**

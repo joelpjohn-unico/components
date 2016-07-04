@@ -23,7 +23,7 @@ import org.talend.daikon.properties.property.StringProperty;
  */
 public class JiraConnectionProperties extends PropertiesImpl {
 
-    private static final String INITIAL_HOST = "https://jira.atlassian.com";
+    private static final String INITIAL_HOST = "\"https://jira.atlassian.com\"";
 
     /**
      * Host URL
