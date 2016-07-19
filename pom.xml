@@ -16,6 +16,7 @@
 		<module>components-common-oauth</module>
 		<module>components-api-archetypes</module>
 		<module>components-salesforce</module>
+		<module>components-snowflake</module>
 		<module>components-webtest</module>
 		<module>components-osgitest</module>
 		<module>components-api-proptester</module>
