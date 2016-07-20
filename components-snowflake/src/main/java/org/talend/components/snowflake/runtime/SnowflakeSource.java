@@ -1,4 +1,4 @@
-package org.talend.components.snowflake;
+package org.talend.components.snowflake.runtime;
 
 import java.io.File;
 import java.io.IOException;
@@ -6,12 +6,11 @@ import java.util.Arrays;
 import java.util.List;
 
 import org.apache.avro.Schema;
-
 import org.talend.components.api.component.runtime.BoundedReader;
 import org.talend.components.api.component.runtime.BoundedSource;
 import org.talend.components.api.container.RuntimeContainer;
 import org.talend.components.api.properties.ComponentProperties;
-
+import org.talend.components.snowflake.SnowflakeConnectionProperties;
 import org.talend.daikon.NamedThing;
 import org.talend.daikon.properties.ValidationResult;
 
@@ -37,18 +36,20 @@ public class SnowflakeSource implements BoundedSource {
     private static final long serialVersionUID = 1L;
 
     /** Configuration extracted from the input properties. */
-    private SnowflakeProperties properties;
+    private SnowflakeConnectionProperties properties;
     
     private transient Schema schema;
 
     public void initialize(RuntimeContainer container, ComponentProperties properties) {
-        this.properties = (SnowflakeProperties) properties;
+        this.properties = (SnowflakeConnectionProperties) properties;
         // FIXME - this should be moved to the properties setup
-        schema = new Schema.Parser().parse(this.properties.schema.schema.getStringValue()); 
+        //schema = new Schema.Parser().parse(this.properties.schema.schema.getStringValue()); 
     }
 
     public BoundedReader createReader(RuntimeContainer container) {
-        return new SnowflakeReader(container, this, this.properties.filename.getStringValue());
+        //return new SnowflakeReader(container, this, this.properties.filename.getStringValue());
+    	return null;
+    	//TODO: Create and Snowflake Input Reader and return it.
     }
 
     public ValidationResult validate(RuntimeContainer adaptor) {

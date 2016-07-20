@@ -20,8 +20,8 @@ import aQute.bnd.annotation.component.Component;
  * a component provides to integrate with the Studio (at design-time) and other 
  * components (at run-time).
  */
-@Component(name = Constants.COMPONENT_BEAN_PREFIX + SnowflakeDefinition.COMPONENT_NAME, provide = ComponentDefinition.class)
-public class SnowflakeDefinition extends AbstractComponentDefinition implements InputComponentDefinition {
+//@Component(name = Constants.COMPONENT_BEAN_PREFIX + SnowflakeDefinition.COMPONENT_NAME, provide = ComponentDefinition.class)
+public abstract class SnowflakeDefinition extends AbstractComponentDefinition implements InputComponentDefinition {
 
     //Unico TODO: Will be defined by the subclass
 	//public static final String COMPONENT_NAME = "Snowflake"; //$NON-NLS-1$

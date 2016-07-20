@@ -1,4 +1,4 @@
-package org.talend.components.snowflake;
+package org.talend.components.snowflake.runtime;
 
 import java.io.BufferedReader;
 import java.io.FileReader;
@@ -16,12 +16,14 @@ import org.talend.components.api.component.runtime.Result;
 /**
  * Simple implementation of a reader.
  */
-public class SnowflakeReader extends AbstractBoundedReader<String> {
+public abstract class SnowflakeReader extends AbstractBoundedReader<String> {
 
     /** Default serial version UID. */
     private static final long serialVersionUID = 1L;
 
-    private static final Logger LOGGER = LoggerFactory.getLogger(SnowflakeDefinition.class);
+    //private static final Logger LOGGER = LoggerFactory.getLogger(SnowflakeDefinition.class);
+    
+    protected int dataCount;
 
     private RuntimeContainer container;
 
@@ -39,7 +41,7 @@ public class SnowflakeReader extends AbstractBoundedReader<String> {
         this.filename = filename;
     }
 
-    @Override
+/*    @Override
     public boolean start() throws IOException {
         started = true;
         LOGGER.debug("open: " + filename); //$NON-NLS-1$
@@ -61,16 +63,18 @@ public class SnowflakeReader extends AbstractBoundedReader<String> {
         }
         return current;
     }
-
+*/
     @Override
     public void close() throws IOException {
-        reader.close();
+        /*reader.close();
         LOGGER.debug("close: " + filename); //$NON-NLS-1$
-    }
+*/    }
 
     @Override
     public Map<String, Object> getReturnValues() {
-        return new Result().toMap();
+        Result result = new Result();
+        result.totalCount = dataCount;
+        return result.toMap();
     }
 
 }
