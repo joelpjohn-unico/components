@@ -3,16 +3,9 @@ package org.talend.components.snowflake;
 import static org.talend.daikon.properties.presentation.Widget.widget;
 import static org.talend.daikon.properties.property.PropertyFactory.*;
 
-import java.util.Collections;
-import java.util.List;
-import java.util.Set;
-
-import org.apache.avro.Schema;
 import org.talend.components.api.component.Connector;
 import org.talend.components.api.component.PropertyPathConnector;
-import org.talend.components.api.properties.ComponentProperties;
-import org.talend.components.common.FixedConnectorsComponentProperties;
-import org.talend.components.common.SchemaProperties;
+import org.talend.components.api.properties.ComponentPropertiesImpl;
 import org.talend.components.common.UserPasswordProperties;
 import org.talend.daikon.properties.PresentationItem;
 import org.talend.daikon.properties.property.Property;
@@ -39,12 +32,14 @@ import org.talend.daikon.properties.presentation.Widget;
  * <li>{code schema}, an embedded property referring to a Schema.</li>
  * </ol>
  */
-public class SnowflakeConnectionProperties extends FixedConnectorsComponentProperties {
+public class SnowflakeConnectionProperties extends ComponentPropertiesImpl
+implements SnowflakeProvideConnectionProperties /* TODO: , ComponentReferencePropertiesEnclosing*/ {
 
-    //public Property filename = PropertyFactory.newString("filename"); //$NON-NLS-1$
-    //public SchemaProperties schema = new SchemaProperties("schema"); //$NON-NLS-1$
-	
 	private static final String USERPASSWORD = "userPassword";
+	public static final String FORM_WIZARD = "Wizard";
+	
+    // Only for the wizard use
+    public Property<String> name = newString("name").setRequired();
 
 	public enum Authenticator {
 		SNOWFLAKE("snowflake"),
@@ -122,6 +117,17 @@ public class SnowflakeConnectionProperties extends FixedConnectorsComponentPrope
     @Override
     public void setupLayout() {
         super.setupLayout();
+        
+        Form wizardForm = Form.create(this, FORM_WIZARD);
+        wizardForm.addRow(name);
+        wizardForm.addRow(userPassword.getForm(Form.MAIN));
+        wizardForm.addRow(account);
+        wizardForm.addRow(warehouse);
+        wizardForm.addRow(db);
+        wizardForm.addRow(schema);
+        wizardForm.addRow(widget(advanced).setWidgetType(Widget.BUTTON_WIDGET_TYPE));
+        wizardForm.addColumn(widget(testConnection).setLongRunning(true).setWidgetType(Widget.BUTTON_WIDGET_TYPE));
+        
         Form mainForm = Form.create(this, Form.MAIN);
         mainForm.addRow(userPassword.getForm(Form.MAIN));
         mainForm.addRow(account);
@@ -135,17 +141,25 @@ public class SnowflakeConnectionProperties extends FixedConnectorsComponentPrope
         advancedForm.addRow(widget(passcodeInPassword).setWidgetType(Widget.ENUMERATION_WIDGET_TYPE));
         advancedForm.addRow(role);
         advancedForm.addRow(passcode);
+        advanced.setFormtoShow(advancedForm);
         
         //form.addRow(schema.getForm(Form.REFERENCE));
         //form.addRow(filename);
     }
+    
+    //TODO: refreshLayout (currently handled in super)
 
-    @Override
+	@Override
+	public SnowflakeConnectionProperties getConnectionProperties() {
+		return this;
+	}
+
+    /*@Override
     protected Set<PropertyPathConnector> getAllSchemaPropertiesConnectors(boolean isOutputComponent) {
         if (isOutputComponent) {
             return Collections.singleton(mainConnector);
         }
         return Collections.emptySet();
-    }
+    }*/
 
 }

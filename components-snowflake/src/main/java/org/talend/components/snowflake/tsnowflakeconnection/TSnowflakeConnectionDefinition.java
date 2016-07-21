@@ -4,14 +4,14 @@ import org.talend.components.api.component.EndpointComponentDefinition;
 import org.talend.components.api.component.runtime.SourceOrSink;
 import org.talend.components.api.properties.ComponentProperties;
 import org.talend.components.snowflake.SnowflakeConnectionProperties;
+import org.talend.components.snowflake.SnowflakeDefinition;
 import org.talend.daikon.properties.property.Property;
 
-import aQute.bnd.annotation.component.Component;
 import aQute.bnd.annotation.component.Component;
 
 @Component(name = Constants.COMPONENT_BEAN_PREFIX
         + TSnowflakeConnectionDefinition.COMPONENT_NAME, provide = ComponentDefinition.class)
-public class TSnowflakeConnectionDefinition extends SalesforceDefinition implements EndpointComponentDefinition{
+public class TSnowflakeConnectionDefinition extends SnowflakeDefinition implements EndpointComponentDefinition{
 
     public static final String COMPONENT_NAME = "tSnowflakeConnection"; //$NON-NLS-1$
 

@@ -21,6 +21,7 @@ target/
 
 # Package Files #
 *.jar
+!snowflake_jdbc.jar
 *.war
 *.ear
 
