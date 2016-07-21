@@ -31,7 +31,10 @@ import org.talend.components.api.exception.ComponentException;
 import org.talend.components.api.properties.ComponentProperties;
 import org.talend.components.snowflake.SnowflakeConnectionProperties;
 import org.talend.components.snowflake.SnowflakeProvideConnectionProperties;
+import org.talend.components.snowflake.connection.Column;
+import org.talend.components.snowflake.connection.ColumnExtension;
 import org.talend.components.snowflake.connection.SnowflakeNativeConnection;
+import org.talend.components.snowflake.connection.SnowflakeTableMetaData;
 import org.talend.daikon.NamedThing;
 import org.talend.daikon.SimpleNamedThing;
 import org.talend.daikon.properties.ValidationResult;
@@ -72,7 +75,7 @@ public class SnowflakeSourceOrSink implements SourceOrSink {
         		vr.setMessage("Could not establish connection to the Snowflake DB");
         	}
         	if (false) throw new IOException(); //TODO: remove this
-        } catch (IOException ex) {
+        } catch (Exception ex) {
             return exceptionToValidationResult(ex);
         }
         return vr;	
@@ -95,7 +98,7 @@ public class SnowflakeSourceOrSink implements SourceOrSink {
     	return this.properties.getConnectionProperties();
     }
     
-    protected SnowflakeNativeConnection connect(RuntimeContainer container) {
+    protected SnowflakeNativeConnection connect(RuntimeContainer container) throws IOException{
     	SnowflakeNativeConnection nativeConn = new SnowflakeNativeConnection();
     	Connection conn = null;
 		String queryString = "";
@@ -155,7 +158,7 @@ public class SnowflakeSourceOrSink implements SourceOrSink {
 				//TODO: fill this in
 			}
 			//TODO: Log error
-			return null;
+			throw new IOException(e);
 		}
 		
 		nativeConn.setConnection(conn);
@@ -212,8 +215,20 @@ public class SnowflakeSourceOrSink implements SourceOrSink {
         }
     }
 	
-	
-	/* (non-Javadoc)
+    public static Schema getSchema(RuntimeContainer container, SnowflakeProvideConnectionProperties properties, String module)
+            throws IOException {
+        SnowflakeSourceOrSink ss = new SnowflakeSourceOrSink();
+        ss.initialize(null, (ComponentProperties) properties);
+        Connection connection = null;
+        try {
+            connection = ss.connect(container).getConnection();
+        } catch (Exception ex) {
+            throw new ComponentException(exceptionToValidationResult(ex));
+        }
+        return ss.getSchema(connection, module);
+    }
+
+    /* (non-Javadoc)
 	 * @see org.talend.components.api.component.runtime.SourceOrSink#getEndpointSchema(org.talend.components.api.container.RuntimeContainer, java.lang.String)
 	 */
 	@Override
@@ -221,20 +236,95 @@ public class SnowflakeSourceOrSink implements SourceOrSink {
 		return getSchema(connect(container).getConnection(), schemaName);
 	}
 	
-    protected Schema getSchema(Connection connection, String schemaName) throws IOException {
+
+	protected Schema getSchema(Connection connection, String schemaName) throws IOException {
         String catalog = properties.getConnectionProperties().db.getStringValue();
 		try {
 			DatabaseMetaData metaData = connection.getMetaData();
 			
+			List<SnowflakeTableMetaData> tableMDList = new ArrayList<>();
+			
 			//Fetch all tables in the db and schema provided
-			ResultSet resultIter =  metaData.getTables(catalog, schemaName, null, null);
-			String catalogName = null;
+			String[] types = {"TABLE"};
+
+			ResultSet resultIter =  metaData.getTables(catalog, 
+														schemaName, 
+														null, 
+														types);
+
 			while (resultIter.next()) {
-				catalogName = resultIter.getString(1);
-				if (catalog.equalsIgnoreCase(catalogName)) { //Only add the user-selected db to the list
-					//returnList.add(new SimpleNamedThing(catalogName, catalogName));
-					break;
+				SnowflakeTableMetaData tableMD = new SnowflakeTableMetaData();
+				List<Column> columnsList = new ArrayList<>();
+				
+				tableMD.setTableName(resultIter.getString(3)); //resultIter.getString("TABLE_NAME")
+				
+				ResultSet columnsIter = metaData.getColumns(catalog, 
+															schemaName, 
+															tableMD.getTableName(), 
+															null);
+				while (columnsIter.next()) {
+					Column column = new Column();
+					ColumnExtension colExt = new ColumnExtension();
+					
+					String name = columnsIter.getString(4);
+					String dType = columnsIter.getString(6);
+					int length = columnsIter.getInt(16);
+					int scale = columnsIter.getInt(9);
+					int precision = columnsIter.getInt(7);
+					String[] datatype = dType.split(" ");
+	
+					if (datatype.length > 1) {
+						if ((datatype[1].equalsIgnoreCase("UNSIGNED"))) {
+							dType = datatype[0];
+						}
+					}
+
+					column.setName(name);
+					column.setdType(dType);
+
+					colExt.setScale(scale);
+					colExt.setLength(length);
+					
+					if (dType.equalsIgnoreCase("DOUBLE")) {
+						colExt.setPrecision(38);
+						colExt.setScale(5);
+					} else if (dType.startsWith("TIMESTAMP")) {
+						colExt.setPrecision(38);
+					} else if (dType.startsWith("DATE")) {
+						colExt.setPrecision(38);
+					} else if (dType.startsWith("TIME")) {
+						colExt.setPrecision(38);
+					} else if (dType.equalsIgnoreCase("BOOLEAN")) {
+						colExt.setPrecision(7);
+					} else if (dType.equalsIgnoreCase("OBJECT")) {
+						colExt.setPrecision(65536);
+					} else if (dType.equalsIgnoreCase("ARRAY")) {
+						colExt.setPrecision(65536);
+					} else if (dType.equalsIgnoreCase("VARIANT")) {
+						colExt.setPrecision(65536);
+					} else {
+						colExt.setPrecision(precision);
+					}
+	
+					// Populating the field extensions: Default value, isNullable
+					String defValue = columnsIter.getString(13);
+					boolean isNullable = "0".equals(columnsIter.getString(11)) ? false : true;
+	
+					colExt.setNullable(isNullable);
+					colExt.setDefColValue(defValue);
+					
+					//TODO: isPrimaryKey, isUnique
+
+					List<ColumnExtension> colExtList = new ArrayList<ColumnExtension>();
+					colExtList.add(colExt);
+
+					column.setExtensions(colExtList);
+					columnsList.add(column);
 				}
+				
+				tableMD.setColumn(columnsList);
+				tableMDList.add(tableMD);
+				
 			}
 		} catch (SQLException se) {
 			//TODO: Handle this
@@ -252,7 +342,6 @@ public class SnowflakeSourceOrSink implements SourceOrSink {
         }*/
     }
 	
-
 	
 	//-------------------------------------------------------------------------------------
 	

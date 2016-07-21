@@ -1,3 +1,5 @@
+package org.talend.components.snowflake.tsnowflakeconnection;
+
 import org.talend.components.api.Constants;
 import org.talend.components.api.component.ComponentDefinition;
 import org.talend.components.api.component.EndpointComponentDefinition;
@@ -5,6 +7,7 @@ import org.talend.components.api.component.runtime.SourceOrSink;
 import org.talend.components.api.properties.ComponentProperties;
 import org.talend.components.snowflake.SnowflakeConnectionProperties;
 import org.talend.components.snowflake.SnowflakeDefinition;
+import org.talend.components.snowflake.runtime.SnowflakeSourceOrSink;
 import org.talend.daikon.properties.property.Property;
 
 import aQute.bnd.annotation.component.Component;

@@ -54,6 +54,8 @@ public class SnowflakeSource implements BoundedSource {
 
     public ValidationResult validate(RuntimeContainer adaptor) {
         // Check that the file exists.
+    	/*
+    	TODO: Unico - revisit this
         File f = new File(this.properties.filename.getStringValue());
         if (!f.exists()) {
             ValidationResult vr = new ValidationResult();
@@ -68,7 +70,7 @@ public class SnowflakeSource implements BoundedSource {
             vr.setStatus(ValidationResult.Result.ERROR);
             return vr;
         }
-        
+         */
         return ValidationResult.OK;
     }
 
