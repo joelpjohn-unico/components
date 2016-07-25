@@ -38,7 +38,7 @@ public class TSnowflakeInputDefinition extends SnowflakeDefinition implements In
 
 	    @SuppressWarnings("unchecked")
 	    @Override
-	    public Class<? extends ComponentProperties>[] getNestedCompatibleComponentPropertiesClass() {
+	    public Class<? extends ComponentProperties>[] getNestedCompatibleComponentPropertiesClass() { //TODO: Check for redundant properties
 	        return concatPropertiesClasses(super.getNestedCompatibleComponentPropertiesClass(),
 	                new Class[] { /*SnowflakeModuleProperties.class*/ SnowflakeConnectionProperties.class});
 	    }

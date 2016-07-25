@@ -74,7 +74,6 @@ public class SnowflakeSourceOrSink implements SourceOrSink {
         		vr.setStatus(Result.ERROR);
         		vr.setMessage("Could not establish connection to the Snowflake DB");
         	}
-        	if (false) throw new IOException(); //TODO: remove this
         } catch (Exception ex) {
             return exceptionToValidationResult(ex);
         }
@@ -233,6 +232,7 @@ public class SnowflakeSourceOrSink implements SourceOrSink {
 	 */
 	@Override
 	public Schema getEndpointSchema(RuntimeContainer container, String schemaName) throws IOException {
+		
 		return getSchema(connect(container).getConnection(), schemaName);
 	}
 	
