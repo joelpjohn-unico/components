@@ -1,18 +1,12 @@
 package org.talend.components.snowflake.runtime;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.avro.Schema;
 import org.talend.components.api.component.runtime.BoundedReader;
 import org.talend.components.api.component.runtime.BoundedSource;
 import org.talend.components.api.container.RuntimeContainer;
-import org.talend.components.api.properties.ComponentProperties;
-import org.talend.components.snowflake.SnowflakeConnectionProperties;
-import org.talend.daikon.NamedThing;
-import org.talend.daikon.properties.ValidationResult;
+import org.talend.components.snowflake.tsnowflakeinput.TSnowflakeInputProperties;
 
 /**
  * The SnowflakeSource provides the mechanism to supply data to other
@@ -30,79 +24,40 @@ import org.talend.daikon.properties.ValidationResult;
  *     and</li>
  * </ul>
  */
-public class SnowflakeSource implements BoundedSource {
+public class SnowflakeSource extends SnowflakeSourceOrSink implements BoundedSource {
 
-    /** Default serial version UID. */
-    private static final long serialVersionUID = 1L;
-
-    /** Configuration extracted from the input properties. */
-    private SnowflakeConnectionProperties properties;
+    public SnowflakeSource() {
+    }
     
-    private transient Schema schema;
-
-    public void initialize(RuntimeContainer container, ComponentProperties properties) {
-    	
-        this.properties = (SnowflakeConnectionProperties) properties;
-        // FIXME - this should be moved to the properties setup
-        //schema = new Schema.Parser().parse(this.properties.schema.schema.getStringValue()); 
+	
+	@Override
+    public List<? extends BoundedSource> splitIntoBundles(long desiredBundleSizeBytes, RuntimeContainer adaptor)
+            throws Exception {
+        List<BoundedSource> list = new ArrayList<>();
+        list.add(this);
+        return list;
     }
 
-    public BoundedReader createReader(RuntimeContainer container) {
-        //return new SnowflakeReader(container, this, this.properties.filename.getStringValue());
-    	return null;
-    	//TODO: Create and Snowflake Input Reader and return it.
-    }
-
-    public ValidationResult validate(RuntimeContainer adaptor) {
-        // Check that the file exists.
-    	/*
-    	TODO: Unico - revisit this
-        File f = new File(this.properties.filename.getStringValue());
-        if (!f.exists()) {
-            ValidationResult vr = new ValidationResult();
-            vr.setMessage("The file '" + f.getPath() + "' does not exist."); //$NON-NLS-1$//$NON-NLS-2$
-            vr.setStatus(ValidationResult.Result.ERROR);
-            return vr;
-        }
-        // Check that there is exactly one column to contain the output.
-        if (schema.getFields().size() != 1) {
-            ValidationResult vr = new ValidationResult();
-            vr.setMessage("The schema must have exactly one column."); //$NON-NLS-1$
-            vr.setStatus(ValidationResult.Result.ERROR);
-            return vr;
-        }
-         */
-        return ValidationResult.OK;
-    }
-
-    public Schema getEndpointSchema(RuntimeContainer container, String schemaName) throws IOException {
-        return null;
-    }
-
-    public List<NamedThing> getSchemaNames(RuntimeContainer container) throws IOException {
-        return null;
-    }
-
-    public Schema getSchemaFromProperties(RuntimeContainer adaptor) throws IOException {
-        return schema;
-    }
-
-    public Schema getPossibleSchemaFromProperties(RuntimeContainer adaptor) throws IOException {
-        return schema;
-    }
-
-     public List<? extends BoundedSource> splitIntoBundles(long desiredBundleSizeBytes, RuntimeContainer adaptor) throws Exception {
-        // There can be only one.
-        return Arrays.asList(this);
-     }
-
-     public long getEstimatedSizeBytes(RuntimeContainer adaptor) {
-        // This will be ignored since the source will never be split.
+    @Override
+    public long getEstimatedSizeBytes(RuntimeContainer adaptor) {
         return 0;
-     }
+    }
 
-     public boolean producesSortedKeys(RuntimeContainer adaptor) {
+    @Override
+    public boolean producesSortedKeys(RuntimeContainer adaptor) {
         return false;
-     }
+    }
+    
+    @Override
+    public BoundedReader createReader(RuntimeContainer container) {
+    	if (properties instanceof TSnowflakeInputProperties) {
+    		TSnowflakeInputProperties sfInProps = (TSnowflakeInputProperties) properties;
+    		//return new SnowflakeInputReader(adaptor, this, sfInProperties); //TODO: Create and Snowflake Input Reader and return it.
+    	} //else if ... check other types and instantiate appropritate Readers
+    	
+    	return null;
+    }
+
+
 
 }
