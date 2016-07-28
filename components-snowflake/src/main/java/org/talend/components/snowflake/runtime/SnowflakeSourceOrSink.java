@@ -214,7 +214,7 @@ public class SnowflakeSourceOrSink implements SourceOrSink {
         }
     }
 	
-    public static Schema getSchema(RuntimeContainer container, SnowflakeProvideConnectionProperties properties, String module)
+    public static Schema getSchema(RuntimeContainer container, SnowflakeProvideConnectionProperties properties, String table)
             throws IOException {
         SnowflakeSourceOrSink ss = new SnowflakeSourceOrSink();
         ss.initialize(null, (ComponentProperties) properties);
@@ -224,7 +224,7 @@ public class SnowflakeSourceOrSink implements SourceOrSink {
         } catch (Exception ex) {
             throw new ComponentException(exceptionToValidationResult(ex));
         }
-        return ss.getSchema(connection, module);
+        return ss.getSchema(connection, table);
     }
 
     /* (non-Javadoc)
