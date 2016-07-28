@@ -11,9 +11,8 @@ import java.util.Set;
 
 import org.talend.components.snowflake.SnowflakeConnectionProperties;
 import org.talend.components.snowflake.SnowflakeProvideConnectionProperties;
-import org.talend.components.api.component.Connector;
+import org.talend.components.snowflake.runtime.SnowflakeConnectionTableProperties;
 import org.talend.components.api.component.PropertyPathConnector;
-import org.talend.components.common.FixedConnectorsComponentProperties;
 import org.talend.daikon.properties.presentation.Form;
 import org.talend.daikon.properties.property.Property;
 
@@ -24,14 +23,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  *
  */
 public class TSnowflakeInputProperties extends
-		FixedConnectorsComponentProperties implements
+		SnowflakeConnectionTableProperties implements
 		SnowflakeProvideConnectionProperties {
 
-    public SnowflakeConnectionProperties connection = new SnowflakeConnectionProperties("connection"); //$NON-NLS-1$
-
-	protected transient PropertyPathConnector MAIN_CONNECTOR = new PropertyPathConnector(Connector.MAIN_NAME, "main");
-
-	
     public Property<String> condition = newProperty("condition"); //$NON-NLS-1$
 
     public Property<Boolean> manualQuery = newBoolean("manualQuery"); //$NON-NLS-1$
@@ -79,7 +73,10 @@ public class TSnowflakeInputProperties extends
 	@Override
 	public void refreshLayout(Form form) {
         super.refreshLayout(form);
-        //UNICO TODO: Anything else here?
+        if (form.getName().equals(Form.MAIN)) {
+            form.getWidget(query.getName()).setHidden(!manualQuery.getValue());
+            form.getWidget(condition.getName()).setHidden(manualQuery.getValue());
+        }
 	}
  
 }

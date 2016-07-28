@@ -5,63 +5,98 @@ import java.sql.Connection;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 
 import org.apache.avro.Schema;
 import org.apache.avro.generic.IndexedRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.talend.components.api.component.runtime.AbstractBoundedReader;
 import org.talend.components.api.component.runtime.BoundedSource;
 import org.talend.components.api.container.RuntimeContainer;
-import org.talend.daikon.avro.converter.IndexedRecordConverter;
-import org.talend.daikon.properties.Properties;
+import org.talend.components.snowflake.tsnowflakeinput.TSnowflakeInputProperties;
+import org.talend.daikon.avro.AvroUtils;
 
 /**
  * Simple implementation of a reader.
  */
-public abstract class SnowflakeInputReader extends
-		AbstractBoundedReader<String> {
+public class SnowflakeInputReader extends SnowflakeReader<IndexedRecord> {
 
 	private static final Logger LOG = LoggerFactory
 			.getLogger(SnowflakeReader.class);
 
-	protected DBInputProperties properties;
-
-	protected RuntimeContainer adaptor;
-
-	protected Connection conn;
-
+	private Connection con;
 	protected ResultSet resultSet;
 
-	protected DBTemplate dbTemplate;
+	//protected DBTemplate dbTemplate;
 
-	private transient ResultSetAdapterFactory factory;
+	private transient SnowflakeResultSetAdapterFactory factory;
 
 	private transient Schema querySchema;
 
-	public DBReader(RuntimeContainer adaptor, DBSource source, DBInputProperties props) {
-		super(adaptor, source);
-		this.adaptor = adaptor;
+	public SnowflakeInputReader(RuntimeContainer container, SnowflakeSource source, TSnowflakeInputProperties props) {
+		super(container, source);
 		this.properties = props;
 	}
 
-	public void setDBTemplate(DBTemplate template) {
+	/*public void setDBTemplate(DBTemplate template) {
 		this.dbTemplate = template;
-	}
+	}*/
 
-	private Schema getSchema() throws IOException {
+	/*private Schema getSchema() throws IOException {
 		if (null == querySchema) {
-			querySchema = new Schema.Parser().parse(properties.schema.schema
+			querySchema = new Schema.Parser().parse(properties.getSchema().schema
 					.getStringValue());
 		}
 		return querySchema;
+	}*/
+	
+	@Override
+	protected Schema getSchema() throws IOException {
+		TSnowflakeInputProperties inProperties = (TSnowflakeInputProperties) properties;
+        if (querySchema == null) {
+            querySchema = super.getSchema();
+            if (inProperties.manualQuery.getValue()) {
+                if (AvroUtils.isIncludeAllFields(properties.table.main.schema.getValue())) {
+                    //TODO: remove the below commented code after verification
+                	/*SObject currentSObject = getCurrentSObject();
+                    Iterator<XmlObject> children = currentSObject.getChildren();*/
+                    List<String> columnsName = new ArrayList<>();
+                    /*while (children.hasNext()) {
+                        columnsName.add(children.next().getName().getLocalPart());
+                    }*/
+
+                    List<Schema.Field> copyFieldList = new ArrayList<>();
+                    for (Schema.Field se : querySchema.getFields()) {
+                        if (columnsName.contains(se.name())) {
+                            Schema.Field field = new Schema.Field(se.name(), se.schema(), se.doc(), se.defaultVal());
+                            Map<String, Object> fieldProps = se.getObjectProps();
+                            for (String propName : fieldProps.keySet()) {
+                                Object propValue = fieldProps.get(propName);
+                                if (propValue != null) {
+                                    field.addProp(propName, propValue);
+                                }
+                            }
+                            copyFieldList.add(field);
+                        }
+                    }
+                    Map<String, Object> objectProps = querySchema.getObjectProps();
+                    querySchema = Schema.createRecord(querySchema.getName(), querySchema.getDoc(), querySchema.getNamespace(),
+                            querySchema.isError());
+                    querySchema.getObjectProps().putAll(objectProps);
+                    querySchema.setFields(copyFieldList);
+                }
+            }
+        }
+        return querySchema;
 	}
 
-	private ResultSetAdapterFactory getFactory() throws IOException {
+	@Override
+	protected SnowflakeResultSetAdapterFactory getFactory() throws IOException {
 		if (null == factory) {
-			factory = new ResultSetAdapterFactory();
+			factory = new SnowflakeResultSetAdapterFactory();
 			factory.setSchema(getSchema());
 		}
 		return factory;
@@ -70,12 +105,13 @@ public abstract class SnowflakeInputReader extends
 	@Override
 	public boolean start() throws IOException {
 		try {
-			conn = dbTemplate.connect(Properties.getConnectionProperties());
-			Statement statement = conn.createStatement();
-			resultSet = statement.executeQuery(properties.sql.getStringValue());
+			con = getConnection().getConnection();
+			Statement statement = con.createStatement();
+			resultSet = statement.executeQuery(getQueryString(properties));
 			return resultSet.next();
 		} catch (Exception e) {
 			e.printStackTrace();
+			//TODO: anything else here?
 			return false;
 		}
 	}
@@ -91,7 +127,7 @@ public abstract class SnowflakeInputReader extends
 	}
 
 	@Override
-	public IndexedRecordConverter<SpecificT, IndexedRecord> getCurrent()
+	public IndexedRecord getCurrent()
 			throws NoSuchElementException {
 		try {
 			return getFactory().convertToAvro(resultSet);
@@ -101,15 +137,10 @@ public abstract class SnowflakeInputReader extends
 	}
 
 	@Override
-	public Instant getCurrentTimestamp() throws NoSuchElementException {
-		return null;
-	}
-
-	@Override
 	public void close() throws IOException {
 		try {
 			resultSet.close();
-			conn.close();
+			con.close();
 		} catch (SQLException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();

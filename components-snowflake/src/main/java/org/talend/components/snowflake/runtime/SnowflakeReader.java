@@ -5,13 +5,10 @@ import java.util.Map;
 
 import org.apache.avro.Schema;
 import org.apache.avro.generic.IndexedRecord;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.talend.components.api.container.RuntimeContainer;
 import org.talend.components.api.component.runtime.AbstractBoundedReader;
 import org.talend.components.api.component.runtime.BoundedSource;
 import org.talend.components.api.component.runtime.Result;
-import org.talend.components.snowflake.SnowflakeDefinition;
 import org.talend.components.snowflake.connection.SnowflakeNativeConnection;
 import org.talend.components.snowflake.tsnowflakeinput.TSnowflakeInputProperties;
 import org.talend.daikon.avro.AvroUtils;
@@ -22,11 +19,6 @@ import org.talend.daikon.avro.converter.IndexedRecordConverter;
  */
 public abstract class SnowflakeReader<T> extends AbstractBoundedReader<T> {
 
-    /** Default serial version UID. */
-    //private static final long serialVersionUID = 1L;
-
-    //private static final Logger LOGGER = LoggerFactory.getLogger(SnowflakeDefinition.class);
-    
 	private transient SnowflakeNativeConnection connection;
 	
 	private transient IndexedRecordConverter<?, IndexedRecord> factory;
@@ -39,20 +31,9 @@ public abstract class SnowflakeReader<T> extends AbstractBoundedReader<T> {
 
     private RuntimeContainer container;
 
-    //private final String filename;
-    private final String tableName; //TODO: should come from SnowflakeConnectionTableProperties
-
-    /*private boolean started = false; No need for now
-
-    private BufferedReader reader = null;
-
-    private transient String current;*/
-
-    public SnowflakeReader(RuntimeContainer container, 
-    							BoundedSource source, String tableName) {
+    public SnowflakeReader(RuntimeContainer container, BoundedSource source) {
     	super(source);
         this.container = container;
-        this.tableName = tableName;
     }
 
     protected SnowflakeNativeConnection getConnection() throws IOException {
@@ -83,9 +64,7 @@ public abstract class SnowflakeReader<T> extends AbstractBoundedReader<T> {
         return querySchema;
     }
 
-    //TODO: switch commented and uncommented lines below
-    //protected String getQueryString(SnowflakeConnectionTableProperties properties) throws IOException {
-    protected String getQueryString(TSnowflakeInputProperties properties) throws IOException {
+    protected String getQueryString(SnowflakeConnectionTableProperties properties) throws IOException {
         String condition = null;
         if (properties instanceof TSnowflakeInputProperties) {
         	TSnowflakeInputProperties inProperties = (TSnowflakeInputProperties) properties;
@@ -105,7 +84,7 @@ public abstract class SnowflakeReader<T> extends AbstractBoundedReader<T> {
             sb.append(se.name());
         }
         sb.append(" from "); //$NON-NLS-1$
-        //sb.append(properties.table.tableName.getStringValue()); //TODO: remove commenting
+        sb.append(properties.table.tableName.getStringValue());
         if (condition != null && condition.trim().length() > 0) {
             sb.append(" where ");
             sb.append(condition);
