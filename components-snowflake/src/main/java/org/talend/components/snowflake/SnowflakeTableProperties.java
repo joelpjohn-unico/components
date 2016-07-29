@@ -75,7 +75,7 @@ public class SnowflakeTableProperties extends ComponentPropertiesImpl implements
         return ValidationResult.OK;
     }
 
-    public ValidationResult afterModuleName() throws Exception {
+    public ValidationResult afterTableName() throws Exception {
         try {
             main.schema.setValue(SnowflakeSourceOrSink.getSchema(null, connection, tableName.getStringValue()));
         } catch (ComponentException ex) {
