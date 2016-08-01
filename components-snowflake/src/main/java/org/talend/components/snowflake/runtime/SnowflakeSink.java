@@ -38,12 +38,12 @@ public class SnowflakeSink extends SnowflakeSourceOrSink implements Sink {
     }
 
     /**
-     * this should never becalled before {@link #validate(RuntimeContainer)} is called but this should not be the case
+     * this should never be called before {@link #validate(RuntimeContainer)} is called but this should not be the case
      * anyway cause validate is called before the pipeline is created.
      *
      * @return the properties
      */
-    public TSnowflakeOutputProperties getSalesforceOutputProperties() {
+    public TSnowflakeOutputProperties getSnowflakeOutputProperties() {
         return (TSnowflakeOutputProperties) properties;
     }
 }
