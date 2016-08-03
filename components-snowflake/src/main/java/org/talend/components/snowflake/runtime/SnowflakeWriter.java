@@ -6,6 +6,9 @@ import static org.talend.components.snowflake.SnowflakeOutputProperties.OutputAc
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
 import java.util.*;
 
 import org.apache.avro.Schema;
@@ -41,12 +44,15 @@ final class SnowflakeWriter implements WriterWithFeedback<Result, IndexedRecord,
     private String upsertKeyColumn;
 
     protected final List<IndexedRecord> deleteItems;
+    private String deleteSQL = "";
 
     protected final List<IndexedRecord> insertItems;
+    private String insertSQL = "";
 
     protected final List<IndexedRecord> upsertItems;
 
     protected final List<IndexedRecord> updateItems;
+    private String updateSQL = "";
 
     protected final int commitLevel;
 
@@ -138,10 +144,26 @@ final class SnowflakeWriter implements WriterWithFeedback<Result, IndexedRecord,
 
     private int[] insert(IndexedRecord input) throws IOException {
         insertItems.add(input);
+        
         if (insertItems.size() >= commitLevel) {
-            return doInsert();
+        	if (null == insertSQL || insertSQL.equalsIgnoreCase("")) {
+        		insertSQL = buildInsertSQL(input);
+        	}
+        	return doInsert();
         }
         return null;
+    }
+    
+    private String buildInsertSQL(IndexedRecord input) {
+    	return "";
+    	//TODO: parse the input data and construct SQL Query
+    }
+    
+    private void setInsertData(PreparedStatement ps, List<IndexedRecord> inputs) throws SQLException{
+    	for (IndexedRecord record: inputs) {
+    		//TODO: Identify the columns and set the data into the preparedstatement
+    		ps.addBatch();
+    	}
     }
 
     private int[] doInsert() throws IOException {
@@ -149,11 +171,14 @@ final class SnowflakeWriter implements WriterWithFeedback<Result, IndexedRecord,
             // Clean the feedback records at each batch write.
             cleanFeedbackRecords();
             
-            //TODO: Code: prepare for insert 
-            
             int[] saveResults = {};
             try {
-            	//TODO: code: execute insert query; check result, handle success and failure accordingly
+            	Connection conn = connection.getConnection();
+            	PreparedStatement ps = conn.prepareStatement(insertSQL);
+            	setInsertData(ps, insertItems);
+            	saveResults = ps.executeBatch();
+            	
+            	//TODO: code: check result, handle success and failure accordingly
             	insertItems.clear();
                 return saveResults;
             } catch (Exception e) { //TODO: catch the correct exception
@@ -166,9 +191,25 @@ final class SnowflakeWriter implements WriterWithFeedback<Result, IndexedRecord,
     private int[] update(IndexedRecord input) throws IOException {
         updateItems.add(input);
         if (updateItems.size() >= commitLevel) {
+        	if (null == insertSQL || insertSQL.equalsIgnoreCase("")) {
+        		updateSQL = buildUpdateSQL(input);
+        	}
+        	
             return doUpdate();
         }
         return null;
+    }
+    
+    private String buildUpdateSQL(IndexedRecord input) {
+    	return "";
+    	//TODO: parse the input data and construct SQL Query
+    }
+    
+    private void setUpdateData(PreparedStatement ps, List<IndexedRecord> inputs) throws SQLException{
+    	for (IndexedRecord record: inputs) {
+    		//TODO: Identify the columns and set the data into the preparedstatement
+    		ps.addBatch();
+    	}
     }
 
     private int[] doUpdate() throws IOException {
@@ -176,12 +217,14 @@ final class SnowflakeWriter implements WriterWithFeedback<Result, IndexedRecord,
             // Clean the feedback records at each batch write.
             cleanFeedbackRecords();
             
-            //TODO: Code: prepare for update
-            
             int[] saveResults = {};
             try {
-            	
-            	//TODO: code: execute query; check result and handle success and failure accordingly 
+            	Connection conn = connection.getConnection();
+            	PreparedStatement ps = conn.prepareStatement(updateSQL);
+            	setUpdateData(ps, insertItems);
+            	saveResults = ps.executeBatch();
+
+            	//TODO:check result and handle success and failure accordingly 
             	
             	updateItems.clear();
                 return saveResults;
