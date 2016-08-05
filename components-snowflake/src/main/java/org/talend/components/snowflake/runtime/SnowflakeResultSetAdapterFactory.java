@@ -67,16 +67,21 @@ public class SnowflakeResultSetAdapterFactory implements IndexedRecordConverter<
 	         public Object get(int i) {
 	             if (names == null) {
 	                 names = new String[getSchema().getFields().size()];
-	                 //fieldConverter = new AvroConverter[names.length];
+	                 fieldConverter = new AvroConverter[names.length];
 	                 for (int j = 0; j < names.length; j++) {
 	                     Field f = getSchema().getFields().get(j);
 	                     names[j] = f.name();
-	                     //fieldConverter[j] = SnowflakeAvroRegistry.get().getConverterFromString(f);
+	                     fieldConverter[j] = SnowflakeAvroRegistry.get().getConverterFromString(f);
 	                 }
 	             }
 	             
 	             try {
 	                 return value.getObject((names[i]));
+	                 
+	                 /*//TODO: Shouldn't this return after converting the value to Avro format?
+	            	 Object val = value.getObject((names[i]));
+	            	 return fieldConverter[i].convertToAvro(val);*/
+	                 
 	             } catch (SQLException e) {
 	                 e.printStackTrace();
 	             }

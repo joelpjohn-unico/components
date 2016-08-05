@@ -10,7 +10,7 @@
     </parent>
 
     <name>Components - Snowflake</name>
-	<groupId>org.talend.components</groupId>
+	<!-- <groupId>org.talend.components</groupId>-->
     <artifactId>components-snowflake</artifactId>
     <version>0.1.0-SNAPSHOT</version>
     <packaging>bundle</packaging>

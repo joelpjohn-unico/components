@@ -1,14 +1,13 @@
 package org.talend.components.snowflake.tsnowflakeinput;
 
 import aQute.bnd.annotation.component.Component;
-
 import org.talend.components.api.Constants;
 import org.talend.components.api.component.ComponentDefinition;
 import org.talend.components.api.component.InputComponentDefinition;
 import org.talend.components.api.component.runtime.Source;
 import org.talend.components.api.properties.ComponentProperties;
-import org.talend.components.snowflake.SnowflakeConnectionProperties;
 import org.talend.components.snowflake.SnowflakeDefinition;
+import org.talend.components.snowflake.SnowflakeTableProperties;
 import org.talend.components.snowflake.runtime.SnowflakeSource;
 
 /**
@@ -32,15 +31,15 @@ public class TSnowflakeInputDefinition extends SnowflakeDefinition implements In
 
 	    @Override
 	    public Class<? extends ComponentProperties> getPropertyClass() {
-	        //return TSnowflakeInputProperties.class; TODO: implement this class
-	    	return SnowflakeConnectionProperties.class; //TODO: replace this
+	        return TSnowflakeInputProperties.class;
+	    	//return SnowflakeConnectionProperties.class;  //TODO: remove this
 	    }
 
 	    @SuppressWarnings("unchecked")
 	    @Override
 	    public Class<? extends ComponentProperties>[] getNestedCompatibleComponentPropertiesClass() { //TODO: Check for redundant properties
 	        return concatPropertiesClasses(super.getNestedCompatibleComponentPropertiesClass(),
-	                new Class[] { /*SnowflakeModuleProperties.class*/ SnowflakeConnectionProperties.class});
+	                new Class[] { SnowflakeTableProperties.class });
 	    }
 
 	    @Override

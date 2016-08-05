@@ -52,9 +52,9 @@ public class SnowflakeSource extends SnowflakeSourceOrSink implements BoundedSou
     public BoundedReader createReader(RuntimeContainer container) {
     	if (properties instanceof TSnowflakeInputProperties) {
     		TSnowflakeInputProperties sfInProps = (TSnowflakeInputProperties) properties;
-    		//return new SnowflakeInputReader(adaptor, this, sfInProperties); //TODO: Create and Snowflake Input Reader and return it.
-    	} //else if ... check other types and instantiate appropritate Readers
-    	
+    		return new SnowflakeInputReader(container, this, sfInProps);
+    	} 
+    	//Should not reach here...
     	return null;
     }
 

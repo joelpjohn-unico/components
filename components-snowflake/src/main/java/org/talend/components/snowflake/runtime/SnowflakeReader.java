@@ -46,6 +46,7 @@ public abstract class SnowflakeReader<T> extends AbstractBoundedReader<T> {
     protected IndexedRecordConverter<?, IndexedRecord> getFactory() throws IOException {
     	if (null == factory) {
     		factory = new SnowflakeResultSetAdapterFactory();
+    		factory.setSchema(getSchema());
     	}
     	return factory;
     }

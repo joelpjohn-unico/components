@@ -3,11 +3,7 @@
  */
 package org.talend.components.snowflake.runtime;
 
-import java.io.File;
 import java.io.IOException;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.net.URLClassLoader;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.Driver;
@@ -18,9 +14,7 @@ import java.sql.SQLException;
 import java.sql.SQLFeatureNotSupportedException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.Properties;
-import java.util.StringTokenizer;
 
 import org.apache.avro.Schema;
 import org.slf4j.Logger;
@@ -46,7 +40,12 @@ import org.talend.daikon.properties.ValidationResult.Result;
  */
 public class SnowflakeSourceOrSink implements SourceOrSink {
 
-    private transient static final Logger LOG = LoggerFactory.getLogger(SnowflakeSourceOrSink.class);
+    /**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+
+	private transient static final Logger LOG = LoggerFactory.getLogger(SnowflakeSourceOrSink.class);
 
 	protected SnowflakeProvideConnectionProperties properties;
 	
@@ -98,11 +97,34 @@ public class SnowflakeSourceOrSink implements SourceOrSink {
     }
     
     protected SnowflakeNativeConnection connect(RuntimeContainer container) throws IOException{
-    	SnowflakeNativeConnection nativeConn = new SnowflakeNativeConnection();
+    	
+    	SnowflakeNativeConnection nativeConn = null;
+        
+    	SnowflakeConnectionProperties connProps = properties.getConnectionProperties();
+        String refComponentId = connProps.getReferencedComponentId();
+        Object sharedConn = null;
+        // Using another component's connection
+        if (refComponentId != null) {
+            // In a runtime container
+            if (container != null) {
+                sharedConn = container.getComponentData(refComponentId, KEY_CONNECTION);
+                if (sharedConn != null) {
+                    if (sharedConn instanceof SnowflakeNativeConnection) {
+                    	nativeConn = (SnowflakeNativeConnection) sharedConn;
+                    } 
+                    return nativeConn;
+                }
+                throw new IOException("Referenced component: " + refComponentId + " not connected");
+            }
+            // Design time
+            connProps = connProps.getReferencedConnectionProperties();
+        }
+
+    	//Establish a new connection
+        nativeConn = new SnowflakeNativeConnection();
     	Connection conn = null;
 		String queryString = "";
 		
-		SnowflakeConnectionProperties connProps = properties.getConnectionProperties();
 		String warehouse = connProps.warehouse.getStringValue();
 		String db = connProps.db.getStringValue();
 		String schema = connProps.schema.getStringValue();
@@ -169,39 +191,6 @@ public class SnowflakeSourceOrSink implements SourceOrSink {
 		return nativeConn;
     }
 
-    
-	/* (non-Javadoc)
-	 * @see org.talend.components.api.component.runtime.SourceOrSink#getSchemaNames(org.talend.components.api.container.RuntimeContainer)
-	 */
-	@Override
-	public List<NamedThing> getSchemaNames(RuntimeContainer container) throws IOException {
-		SnowflakeConnectionProperties connProps = properties.getConnectionProperties();
-		String catalog = connProps.db.getStringValue();
-		return getSchemaNames(connect(container).getConnection(), catalog);
-	}
-
-	protected List<NamedThing> getSchemaNames(Connection connection, String catalog) throws IOException {
-
-		//Returns the list with a db name found in the metadata
-		List<NamedThing> returnList = new ArrayList<>();
-		try {
-			DatabaseMetaData metaData = connection.getMetaData();
-			
-			ResultSet resultIter =  metaData.getCatalogs();
-			String catalogName = null;
-			while (resultIter.next()) {
-				catalogName = resultIter.getString(1);
-				if (catalog.equalsIgnoreCase(catalogName)) { //Only add the user-selected db to the list
-					returnList.add(new SimpleNamedThing(catalogName, catalogName));
-					break;
-				}
-			}
-		} catch (SQLException se) {
-			//TODO: Handle this
-		}
-		return returnList;
-	}
-	
     public static List<NamedThing> getSchemaNames(RuntimeContainer container, SnowflakeProvideConnectionProperties properties)
             throws IOException {
         SnowflakeSourceOrSink ss = new SnowflakeSourceOrSink();
@@ -213,6 +202,52 @@ public class SnowflakeSourceOrSink implements SourceOrSink {
             throw new ComponentException(exceptionToValidationResult(ex));
         }
     }
+    
+	/* (non-Javadoc)
+	 * @see org.talend.components.api.component.runtime.SourceOrSink#getSchemaNames(org.talend.components.api.container.RuntimeContainer)
+	 */
+	@Override
+	public List<NamedThing> getSchemaNames(RuntimeContainer container) throws IOException {
+		return getSchemaNames(connect(container).getConnection());
+	}
+
+	/**
+	 * Fetches the list of tables names in a database connection
+	 * @param connection
+	 * @return
+	 * @throws IOException
+	 */
+	protected List<NamedThing> getSchemaNames(Connection connection) throws IOException {
+
+		SnowflakeConnectionProperties connProps = properties.getConnectionProperties();
+		String catalog = connProps.db.getStringValue();
+		String dbSchema = connProps.schema.getStringValue();
+
+		//Returns the list with a table names (for the wh, db and schema)
+		List<NamedThing> returnList = new ArrayList<>();
+		try {
+			DatabaseMetaData metaData = connection.getMetaData();
+			
+			//Fetch all tables in the db and schema provided
+			String[] types = {"TABLE"};
+
+			ResultSet resultIter =  metaData.getTables(catalog, 
+														dbSchema, 
+														null, 
+														types);
+			
+			//ResultSet resultIter =  metaData.getCatalogs();
+			String tableName = null;
+			while (resultIter.next()) {
+				tableName = resultIter.getString("TABLE_NAME");
+				returnList.add(new SimpleNamedThing(tableName, tableName));
+			}
+		} catch (SQLException se) {
+			//TODO: Handle this
+		}
+		return returnList;
+	}
+	
 	
     public static Schema getSchema(RuntimeContainer container, SnowflakeProvideConnectionProperties properties, String table)
             throws IOException {
@@ -237,22 +272,20 @@ public class SnowflakeSourceOrSink implements SourceOrSink {
 	}
 	
 
-	protected Schema getSchema(Connection connection, String schemaName) throws IOException {
+	protected Schema getSchema(Connection connection, String tableName) throws IOException {
         String catalog = properties.getConnectionProperties().db.getStringValue();
+        String dbSchema = properties.getConnectionProperties().schema.getStringValue();
 		try {
 			DatabaseMetaData metaData = connection.getMetaData();
 			
-			List<SnowflakeTableMetaData> tableMDList = new ArrayList<>();
+			//List<SnowflakeTableMetaData> tableMDList = new ArrayList<>();
 			
-			//Fetch all tables in the db and schema provided
-			String[] types = {"TABLE"};
+			ResultSet resultIter =  metaData.getColumns(catalog, 
+														dbSchema, 
+														tableName, 
+														null);
 
-			ResultSet resultIter =  metaData.getTables(catalog, 
-														schemaName, 
-														null, 
-														types);
-
-			while (resultIter.next()) {
+			/*while (resultIter.next()) {
 				SnowflakeTableMetaData tableMD = new SnowflakeTableMetaData();
 				List<Column> columnsList = new ArrayList<>();
 				
@@ -325,21 +358,20 @@ public class SnowflakeSourceOrSink implements SourceOrSink {
 				tableMD.setColumn(columnsList);
 				tableMDList.add(tableMD);
 				
+			}*/
+
+			if (resultIter.next()) {
+				return SnowflakeAvroRegistry.get().inferSchema(resultIter);
 			}
+			
 		} catch (SQLException se) {
 			//TODO: Handle this
 		}
     	
+		//TODO: Logger here to indicate fetching schema failed...
+		
+    	return null; 
     	
-    	return null; //TODO:
-    	
-    	//TODO: implement once the registry class is ready
-    	/*try {
-
-            return SnowflakeAvroRegistry.get().inferSchema(describeSObjectResults[0]);
-        } catch (SQLException e) {
-            throw new IOException(e);
-        }*/
     }
 	
 	

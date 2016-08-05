@@ -3,6 +3,7 @@ package org.talend.components.snowflake.runtime;
 import java.io.IOException;
 import java.sql.Connection;
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
@@ -34,7 +35,7 @@ public class SnowflakeInputReader extends SnowflakeReader<IndexedRecord> {
 
 	private transient SnowflakeResultSetAdapterFactory factory;
 
-	private transient Schema querySchema;
+	//private transient Schema querySchema;
 
 	public SnowflakeInputReader(RuntimeContainer container, SnowflakeSource source, TSnowflakeInputProperties props) {
 		super(container, source);
@@ -60,13 +61,22 @@ public class SnowflakeInputReader extends SnowflakeReader<IndexedRecord> {
             querySchema = super.getSchema();
             if (inProperties.manualQuery.getValue()) {
                 if (AvroUtils.isIncludeAllFields(properties.table.main.schema.getValue())) {
-                    //TODO: remove the below commented code after verification
-                	/*SObject currentSObject = getCurrentSObject();
-                    Iterator<XmlObject> children = currentSObject.getChildren();*/
+
+                	ResultSet currentRS = getCurrentResultSet();
+                	
                     List<String> columnsName = new ArrayList<>();
-                    /*while (children.hasNext()) {
-                        columnsName.add(children.next().getName().getLocalPart());
-                    }*/
+
+                    try {
+	                    ResultSetMetaData rsmd = currentRS.getMetaData();
+	                	int colCount = rsmd.getColumnCount(); 
+                	
+	                	for (int i = 1; i <= colCount; i++) {
+	                		columnsName.add(rsmd.getColumnName(i));
+	                	}
+	                	
+                    } catch(SQLException sqe) {
+                    	//TODO: logger here
+                    }
 
                     List<Schema.Field> copyFieldList = new ArrayList<>();
                     for (Schema.Field se : querySchema.getFields()) {
@@ -124,6 +134,10 @@ public class SnowflakeInputReader extends SnowflakeReader<IndexedRecord> {
 			e.printStackTrace();
 			return false;
 		}
+	}
+	
+	private ResultSet getCurrentResultSet() {
+		return resultSet;
 	}
 
 	@Override

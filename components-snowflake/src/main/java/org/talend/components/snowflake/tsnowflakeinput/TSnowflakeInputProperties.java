@@ -1,4 +1,4 @@
-/**
+	/**
  * 
  */
 package org.talend.components.snowflake.tsnowflakeinput;
@@ -10,7 +10,6 @@ import java.util.Collections;
 import java.util.Set;
 
 import org.talend.components.snowflake.SnowflakeConnectionProperties;
-import org.talend.components.snowflake.SnowflakeProvideConnectionProperties;
 import org.talend.components.snowflake.runtime.SnowflakeConnectionTableProperties;
 import org.talend.components.api.component.PropertyPathConnector;
 import org.talend.daikon.properties.presentation.Form;
@@ -22,9 +21,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
  * @author user
  *
  */
-public class TSnowflakeInputProperties extends
-		SnowflakeConnectionTableProperties implements
-		SnowflakeProvideConnectionProperties {
+public class TSnowflakeInputProperties extends SnowflakeConnectionTableProperties  {
 
     public Property<String> condition = newProperty("condition"); //$NON-NLS-1$
 

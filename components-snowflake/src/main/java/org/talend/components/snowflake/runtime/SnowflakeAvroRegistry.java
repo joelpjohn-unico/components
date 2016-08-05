@@ -43,6 +43,11 @@ public class SnowflakeAvroRegistry extends AvroRegistry {
 		
 		registerSchemaInferrer(ResultSet.class, new SerializableFunction<ResultSet, Schema>() {
 
+			/**
+			 * 
+			 */
+			private static final long serialVersionUID = 1L;
+
 			@Override
 			public Schema apply(ResultSet paramT) {
 				
