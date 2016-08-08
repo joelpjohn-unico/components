@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.Properties;
 
 import org.apache.avro.Schema;
+import org.apache.avro.Schema.Field;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.talend.components.api.component.runtime.SourceOrSink;
@@ -31,6 +32,7 @@ import org.talend.components.snowflake.connection.SnowflakeNativeConnection;
 import org.talend.components.snowflake.connection.SnowflakeTableMetaData;
 import org.talend.daikon.NamedThing;
 import org.talend.daikon.SimpleNamedThing;
+import org.talend.daikon.avro.SchemaConstants;
 import org.talend.daikon.properties.ValidationResult;
 import org.talend.daikon.properties.ValidationResult.Result;
 
@@ -275,6 +277,9 @@ public class SnowflakeSourceOrSink implements SourceOrSink {
 	protected Schema getSchema(Connection connection, String tableName) throws IOException {
         String catalog = properties.getConnectionProperties().db.getStringValue();
         String dbSchema = properties.getConnectionProperties().schema.getStringValue();
+        
+        Schema tableSchema = null;
+        
 		try {
 			DatabaseMetaData metaData = connection.getMetaData();
 			
@@ -361,16 +366,34 @@ public class SnowflakeSourceOrSink implements SourceOrSink {
 			}*/
 
 			if (resultIter.next()) {
-				return SnowflakeAvroRegistry.get().inferSchema(resultIter);
+				
+				tableSchema = SnowflakeAvroRegistry.get().inferSchema(resultIter);
+				
+				//Update the schema with Primary Key details
+				if (null != tableSchema) {
+					ResultSet keysIter =  metaData.getPrimaryKeys(catalog, 
+																	dbSchema, 
+																	tableName);
+
+					List<String> pkColumns = new ArrayList<>(); //List of Primary Key columns for this table
+					while(keysIter.next()) {
+						pkColumns.add(keysIter.getString("COLUMN_NAME"));
+					}
+					
+					for(Field f : tableSchema.getFields()) {
+						if (pkColumns.contains(f.schema().getName())) {
+							f.schema().addProp(SchemaConstants.TALEND_COLUMN_IS_KEY, true);
+						}
+					}
+				}
+				
 			}
 			
 		} catch (SQLException se) {
-			//TODO: Handle this
+			//TODO: Handle this.. logger
 		}
     	
-		//TODO: Logger here to indicate fetching schema failed...
-		
-    	return null; 
+    	return tableSchema; 
     	
     }
 	

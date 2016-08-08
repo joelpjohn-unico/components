@@ -116,7 +116,7 @@ public class SnowflakeOutputProperties extends SnowflakeConnectionTablePropertie
             mainForm.addColumn(upsertKeyColumn);
         }
 
-        Form advancedForm = getForm(Form.ADVANCED);
+        Form advancedForm = getForm(Form.ADVANCED); //TODO: check if this has already been defined.
         advancedForm.addRow(widget(sfUpsertRelationTable).setWidgetType(Widget.TABLE_WIDGET_TYPE));
         // check
         // I18N

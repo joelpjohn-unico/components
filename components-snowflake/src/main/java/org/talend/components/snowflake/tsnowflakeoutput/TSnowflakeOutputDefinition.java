@@ -50,13 +50,15 @@ public class TSnowflakeOutputDefinition extends SnowflakeDefinition implements O
     @Override
     public Class<? extends ComponentProperties>[] getNestedCompatibleComponentPropertiesClass() {
         return concatPropertiesClasses(super.getNestedCompatibleComponentPropertiesClass(),
-                new Class[] { SnowflakeTableProperties.class }); //TODO: check for duplicate
+                new Class[] { SnowflakeTableProperties.class });
     }
 
     @Override
     public Property[] getReturnProperties() {
-        return new Property[] { RETURN_ERROR_MESSAGE_PROP, RETURN_TOTAL_RECORD_COUNT_PROP, RETURN_SUCCESS_RECORD_COUNT_PROP,
-                RETURN_REJECT_RECORD_COUNT_PROP };
+        return new Property[] { RETURN_ERROR_MESSAGE_PROP, 
+				        		RETURN_TOTAL_RECORD_COUNT_PROP, 
+				        		RETURN_SUCCESS_RECORD_COUNT_PROP,
+				                RETURN_REJECT_RECORD_COUNT_PROP };
     }
 
     @Override

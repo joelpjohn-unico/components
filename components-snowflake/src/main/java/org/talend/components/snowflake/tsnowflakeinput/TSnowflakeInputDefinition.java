@@ -1,6 +1,7 @@
 package org.talend.components.snowflake.tsnowflakeinput;
 
 import aQute.bnd.annotation.component.Component;
+
 import org.talend.components.api.Constants;
 import org.talend.components.api.component.ComponentDefinition;
 import org.talend.components.api.component.InputComponentDefinition;
@@ -9,6 +10,7 @@ import org.talend.components.api.properties.ComponentProperties;
 import org.talend.components.snowflake.SnowflakeDefinition;
 import org.talend.components.snowflake.SnowflakeTableProperties;
 import org.talend.components.snowflake.runtime.SnowflakeSource;
+import org.talend.components.snowflake.tsnowflakeoutput.TSnowflakeOutputProperties;
 
 /**
  * Component that can connect to a snowflake system and get some data out of it.
@@ -32,7 +34,8 @@ public class TSnowflakeInputDefinition extends SnowflakeDefinition implements In
 	    @Override
 	    public Class<? extends ComponentProperties> getPropertyClass() {
 	        return TSnowflakeInputProperties.class;
-	    	//return SnowflakeConnectionProperties.class;  //TODO: remove this
+	        
+	    	/*return SnowflakeConnectionProperties.class;  //TODO: remove this*/
 	    }
 
 	    @SuppressWarnings("unchecked")

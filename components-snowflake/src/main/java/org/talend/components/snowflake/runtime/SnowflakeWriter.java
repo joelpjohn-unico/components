@@ -9,9 +9,11 @@ import java.nio.charset.Charset;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+import java.sql.Types;
 import java.util.*;
 
 import org.apache.avro.Schema;
+import org.apache.avro.Schema.Field;
 import org.apache.avro.generic.GenericData;
 import org.apache.avro.generic.IndexedRecord;
 import org.talend.components.api.component.runtime.Result;
@@ -44,15 +46,18 @@ final class SnowflakeWriter implements WriterWithFeedback<Result, IndexedRecord,
     private String upsertKeyColumn;
 
     protected final List<IndexedRecord> deleteItems;
-    private String deleteSQL = "";
+    private String deleteSQL = null;
+    private PreparedStatement deletePS = null;
 
     protected final List<IndexedRecord> insertItems;
-    private String insertSQL = "";
+    private String insertSQL = null;
+    private PreparedStatement insertPS = null;
 
     protected final List<IndexedRecord> upsertItems;
 
     protected final List<IndexedRecord> updateItems;
-    private String updateSQL = "";
+    private String updateSQL = null;
+    private PreparedStatement updatePS = null;
 
     protected final int commitLevel;
 
@@ -77,6 +82,12 @@ final class SnowflakeWriter implements WriterWithFeedback<Result, IndexedRecord,
     private final List<IndexedRecord> rejectedWrites = new ArrayList<>();
 
     private final List<String> nullValueFields = new ArrayList<>();
+    
+    private final String formatDate = "yyyy-MM-dd";
+    private final String formatTime = "HH:mm:ss";
+    private final String formatTimestamp = "yyyy-MM-dd HH:mm:ss.SSS";
+    private Map<Integer, Integer> schemaToSQLPositionMap;
+    
 
     public SnowflakeWriter(SnowflakeWriteOperation sfWriteOperation, RuntimeContainer container) {
         this.snowflakeWriteOperation = sfWriteOperation;
@@ -144,26 +155,200 @@ final class SnowflakeWriter implements WriterWithFeedback<Result, IndexedRecord,
 
     private int[] insert(IndexedRecord input) throws IOException {
         insertItems.add(input);
+
+    	if (null == insertSQL || insertSQL.equalsIgnoreCase("")) {
+    		insertSQL = buildInsertSQL(input);
+    	}
+    	if (null == insertPS) {
+            try {
+            	Connection conn = connection.getConnection();
+            	insertPS = conn.prepareStatement(insertSQL);
+            } catch (Exception e) { //TODO: catch the correct exception
+                throw new IOException(e);
+            }    		
+    	} 	
         
         if (insertItems.size() >= commitLevel) {
-        	if (null == insertSQL || insertSQL.equalsIgnoreCase("")) {
-        		insertSQL = buildInsertSQL(input);
-        	}
         	return doInsert();
         }
         return null;
     }
     
     private String buildInsertSQL(IndexedRecord input) {
-    	return "";
-    	//TODO: parse the input data and construct SQL Query
+    	
+    	Schema metaData = input.getSchema(); //Assumption: this will not violate the target schema
+    	
+    	String tableName = metaData.getName();
+    	List<Field> columns = metaData.getFields();
+    	int colSize = columns.size();
+    	Schema columnMataData;
+    	
+    	insertSQL = "INSERT INTO " + tableName + "(";
+    	
+    	//List the column names
+    	for (Field f : columns) {
+    		columnMataData = f.schema();
+    		insertSQL += columnMataData.getName() + ", ";
+    		//columnMataData.getType();
+    	}
+    	insertSQL = insertSQL.substring(0, insertSQL.lastIndexOf(", ")) + ") VALUES(";
+    	
+    	//List the place-holders (for the data to be set in PreparedStatement)
+    	for(int i = 0; i < colSize; i++) {
+    		insertSQL += "?, ";
+    	}
+    	insertSQL = insertSQL.substring(0, insertSQL.lastIndexOf(", ")) + ")";
+    	
+    	return insertSQL;
     }
     
-    private void setInsertData(PreparedStatement ps, List<IndexedRecord> inputs) throws SQLException{
+    private void setDataToNativeSink(PreparedStatement ps, List<IndexedRecord> inputs) throws SQLException{
+    	
     	for (IndexedRecord record: inputs) {
-    		//TODO: Identify the columns and set the data into the preparedstatement
-    		ps.addBatch();
-    	}
+    		// Identify the columns and set the data into the preparedstatement
+    		
+        	Schema metaData = record.getSchema();
+        	
+        	List<Field> columns = metaData.getFields();
+        	int colSize = columns.size();
+        	Schema columnMetaData;
+		    
+    		Schema.Type fieldType;
+    		
+    		String formatDateTime = null;
+    		
+    		int sqlFPos = 1;
+
+    		for (Field f : columns) {
+    			
+    			  switch (sprops.outputAction.getValue()) {
+    		        case INSERT:
+    		        	sqlFPos = f.pos();
+    		        	break;
+    		        case UPDATE:
+    		        	sqlFPos = schemaToSQLPositionMap.get(f.pos());
+    		        	break;
+    		        case DELETE:
+    		      		columnMetaData = f.schema();
+    		    		Object isKeyProp = columnMetaData.getObjectProp(SchemaConstants.TALEND_COLUMN_IS_KEY);
+    		    		
+    		    		if (null != isKeyProp && ((Boolean)isKeyProp).booleanValue() == true) {
+    		    			sqlFPos = schemaToSQLPositionMap.get(f.pos());
+    		    		} else {
+    		    			continue; //check the next field
+    		    		}
+    		        	break;
+    		        
+    		        default:
+    		        	continue; //Ideally, should not reach here
+    		        	
+    		      }
+    			
+    			fieldType = f.schema().getType();
+    			
+    			//boolean fieldNullable = f.schema(). TODO
+    			
+    			Object prec = f.schema().getObjectProp(SchemaConstants.TALEND_COLUMN_PRECISION);
+    			formatDateTime = f.schema().getProp(SchemaConstants.TALEND_COLUMN_PATTERN);
+    			
+    			Object value = record.get(f.pos()); //data for the field
+    			
+    			switch(fieldType) {
+    			
+    			case STRING:
+    				if (null != prec) {
+    					//NUMBER
+    					if (null != value) {
+    						ps.setInt(sqlFPos, (Integer)value);
+    					} else {
+    						ps.setNull(sqlFPos, Types.INTEGER);
+    					}
+    				} else if (false) {
+    					//TODO: handle OBJECT, ARRAY & VARIANT
+    				} 
+    				else {
+    					if (null != value) {
+    						ps.setString(sqlFPos, (String)value);
+    					} else {
+    						ps.setString(sqlFPos, null);
+    					}
+    				}
+    				break;
+    				
+    			case INT:
+    				if (null != prec) {
+    					if (null != value) {
+    						ps.setInt(sqlFPos, (Integer)value);
+    					} else {
+    						ps.setNull(sqlFPos, Types.INTEGER);
+    					}
+    					
+    				} else {
+    					//TODO: check other types
+    				}
+    				break;
+    				
+    			case DOUBLE:
+					if (null != value) {
+						ps.setDouble(sqlFPos, (Double)value);
+					} else {
+						ps.setNull(sqlFPos, Types.DOUBLE);
+					}
+    				break;
+    				
+    			case FLOAT:
+					if (null != value) {
+						ps.setFloat(sqlFPos, (Float)value);
+					} else {
+						ps.setNull(sqlFPos, Types.FLOAT);
+					}
+    				break;
+    				
+    			case LONG:
+					if (null != formatDateTime) {
+						switch(formatDateTime) {
+						case formatDate:
+							if (null != value) {
+								ps.setDate(sqlFPos, new java.sql.Date((Long)value));
+							} else {
+								ps.setNull(sqlFPos, Types.DATE);
+							}
+							break;
+							
+						case formatTime:
+							if (null != value) {
+								ps.setTime(sqlFPos, new java.sql.Time((Long)value));
+							} else {
+								ps.setNull(sqlFPos, Types.TIME);
+							}
+							break;
+							
+						case formatTimestamp:
+							if (null != value) {
+								ps.setTimestamp(sqlFPos, new java.sql.Timestamp((Long)value));
+							} else {
+								ps.setNull(sqlFPos, Types.TIMESTAMP);
+							}
+							break;
+						}
+						
+					} else if (null != value) {
+						ps.setLong(sqlFPos, (Long)value);
+					} else {
+						ps.setNull(sqlFPos, Types.BIGINT);
+					}
+    				break;
+
+    			case BOOLEAN:
+					if (null != value) {
+						ps.setBoolean(sqlFPos, (Boolean)value);
+					} else {
+						ps.setNull(sqlFPos, Types.BOOLEAN);
+					}
+    				break;
+    			}
+    		}//end fields
+    	}//end records
     }
 
     private int[] doInsert() throws IOException {
@@ -173,10 +358,10 @@ final class SnowflakeWriter implements WriterWithFeedback<Result, IndexedRecord,
             
             int[] saveResults = {};
             try {
-            	Connection conn = connection.getConnection();
-            	PreparedStatement ps = conn.prepareStatement(insertSQL);
-            	setInsertData(ps, insertItems);
-            	saveResults = ps.executeBatch();
+            	setDataToNativeSink(insertPS, insertItems);
+            	insertPS.addBatch();
+            	saveResults = insertPS.executeBatch();
+            	insertPS.clearBatch();
             	
             	//TODO: code: check result, handle success and failure accordingly
             	insertItems.clear();
@@ -190,28 +375,70 @@ final class SnowflakeWriter implements WriterWithFeedback<Result, IndexedRecord,
 
     private int[] update(IndexedRecord input) throws IOException {
         updateItems.add(input);
+
+    	if (null == updateSQL || updateSQL.equalsIgnoreCase("")) {
+    		updateSQL = buildUpdateSQL(input);
+    	}
+    	if (null == updatePS) {
+            try {
+            	Connection conn = connection.getConnection();
+            	updatePS = conn.prepareStatement(updateSQL);
+            } catch (Exception e) { //TODO: catch the correct exception
+                throw new IOException(e);
+            }    		
+    	} 	
+        
         if (updateItems.size() >= commitLevel) {
-        	if (null == insertSQL || insertSQL.equalsIgnoreCase("")) {
-        		updateSQL = buildUpdateSQL(input);
-        	}
-        	
-            return doUpdate();
+        	return doUpdate();
         }
         return null;
     }
     
-    private String buildUpdateSQL(IndexedRecord input) {
-    	return "";
-    	//TODO: parse the input data and construct SQL Query
+    private String buildUpdateSQL(IndexedRecord input) throws IOException{
+    	Schema metaData = input.getSchema(); //Assumption: this will not violate the target schema
+    	
+    	String tableName = metaData.getName();
+    	List<Field> columns = metaData.getFields();
+    	int colSize = columns.size();
+    	Schema columnMetaData;
+    	List<Field> pkFields = new ArrayList<>();
+    	schemaToSQLPositionMap = new HashMap<>();
+    	int sqlPos = 0;
+    	
+    	updateSQL = "UPDATE TABLE " + tableName + " SET ";
+    	
+    	//List the column names
+    	for (Field f : columns) {
+    		columnMetaData = f.schema();
+    		Object isKeyProp = columnMetaData.getObjectProp(SchemaConstants.TALEND_COLUMN_IS_KEY);
+    		
+    		if (null != isKeyProp && ((Boolean)isKeyProp).booleanValue() == true) {
+    			pkFields.add(f);
+    		} else {
+    			sqlPos++;
+    			schemaToSQLPositionMap.put(f.pos(), sqlPos);
+    			updateSQL += columnMetaData.getName() + "=?, ";
+    		}
+    		
+    	}
+    	updateSQL = updateSQL.substring(0, updateSQL.lastIndexOf(", ")) + " WHERE ";
+    	
+    	if (pkFields.isEmpty()) {
+    		throw new IOException("TABLE "+ tableName + " CANNOT BE UPDATED WITHOUT PRIMARY KEY(S)");
+    	}
+    	for(Field f: pkFields) {
+    		columnMetaData = f.schema();
+    		
+			sqlPos++; //running position
+			schemaToSQLPositionMap.put(f.pos(), sqlPos);
+    		
+    		updateSQL += columnMetaData.getName() + "=? AND ";
+    	}
+    	updateSQL = updateSQL.substring(0, updateSQL.lastIndexOf("AND ")) + ")";
+    	
+    	return updateSQL;
     }
     
-    private void setUpdateData(PreparedStatement ps, List<IndexedRecord> inputs) throws SQLException{
-    	for (IndexedRecord record: inputs) {
-    		//TODO: Identify the columns and set the data into the preparedstatement
-    		ps.addBatch();
-    	}
-    }
-
     private int[] doUpdate() throws IOException {
         if (updateItems.size() > 0) {
             // Clean the feedback records at each batch write.
@@ -219,16 +446,15 @@ final class SnowflakeWriter implements WriterWithFeedback<Result, IndexedRecord,
             
             int[] saveResults = {};
             try {
-            	Connection conn = connection.getConnection();
-            	PreparedStatement ps = conn.prepareStatement(updateSQL);
-            	setUpdateData(ps, insertItems);
-            	saveResults = ps.executeBatch();
-
-            	//TODO:check result and handle success and failure accordingly 
+            	setDataToNativeSink(updatePS, updateItems);
+            	updatePS.addBatch();
+            	saveResults = updatePS.executeBatch();
+            	updatePS.clearBatch();
             	
+            	//TODO: code: check result, handle success and failure accordingly
             	updateItems.clear();
                 return saveResults;
-            } catch (Exception e) { //TODO: catch the proper exception
+            } catch (Exception e) { //TODO: catch the correct exception
                 throw new IOException(e);
             }
         }
@@ -291,43 +517,80 @@ final class SnowflakeWriter implements WriterWithFeedback<Result, IndexedRecord,
     }
 
     private int[] delete(IndexedRecord input) throws IOException {
-        // Calculate the field position of the Id the first time that it is used. The Id field must be present in the
-        // schema to delete rows.
-        if (deleteFieldId == -1) {
-            String ID = "Id";
-            Schema.Field idField = input.getSchema().getField(ID);
-            if (null == idField) {
-                //TODO: throw the appropriate exception
-            	/*throw new ComponentException(new DefaultErrorCode(HttpServletResponse.SC_BAD_REQUEST, "message"),
-                        ExceptionContext.build().put("message", ID + " not found"));*/
-            }
-            deleteFieldId = idField.pos();
-        }
-        String id = (String) input.get(deleteFieldId);
-        if (id != null) {
-            deleteItems.add(input);
-            if (deleteItems.size() >= commitLevel) {
-                return doDelete();
-            }
+        deleteItems.add(input);
+
+    	if (null == deleteSQL || deleteSQL.equalsIgnoreCase("")) {
+    		deleteSQL = buildDeleteSQL(input);
+    	}
+    	if (null == deletePS) {
+            try {
+            	Connection conn = connection.getConnection();
+            	deletePS = conn.prepareStatement(deleteSQL);
+            } catch (Exception e) { //TODO: catch the correct exception
+                throw new IOException(e);
+            }    		
+    	} 	
+        
+        if (deleteItems.size() >= commitLevel) {
+        	return doDelete();
         }
         return null;
     }
+    
+    private String buildDeleteSQL(IndexedRecord input) throws IOException{
+    	Schema metaData = input.getSchema(); //Assumption: this will not violate the target schema
+    	
+    	String tableName = metaData.getName();
+    	List<Field> columns = metaData.getFields();
+    	Schema columnMetaData;
+    	List<Field> pkFields = new ArrayList<>();
+    	schemaToSQLPositionMap = new HashMap<>();
+    	int sqlPos = 0;
+    	
+    	deleteSQL = "DELETE FROM " + tableName + " WHERE ";
+    	
+    	//List the column names
+    	for (Field f : columns) {
+    		columnMetaData = f.schema();
+    		Object isKeyProp = columnMetaData.getObjectProp(SchemaConstants.TALEND_COLUMN_IS_KEY);
+    		
+    		if (null != isKeyProp && ((Boolean)isKeyProp).booleanValue() == true) {
+    			pkFields.add(f);
+    		}
+    	}
+    	
+    	if (pkFields.isEmpty()) {
+    		throw new IOException("DELETE CANNOT BE DONE ON TABLE "+ tableName + " WITHOUT PRIMARY KEY(S)");
+    	}
+    	for(Field f: pkFields) {
+    		columnMetaData = f.schema();
+    		
+			sqlPos++; //running position
+			schemaToSQLPositionMap.put(f.pos(), sqlPos);
+    		
+			deleteSQL += columnMetaData.getName() + "=? AND ";
+    	}
+    	deleteSQL = deleteSQL.substring(0, deleteSQL.lastIndexOf("AND ")) + ")";
+    	
+    	return deleteSQL;
+    }
+    
 
     private int[] doDelete() throws IOException {
         if (deleteItems.size() > 0) {
             // Clean the feedback records at each batch write.
             cleanFeedbackRecords();
-            String[] delIDs = new String[deleteItems.size()];
-            String[] changedItemKeys = new String[delIDs.length];
-            for (int ix = 0; ix < delIDs.length; ++ix) {
-                delIDs[ix] = (String) deleteItems.get(ix).get(deleteFieldId);
-                changedItemKeys[ix] = delIDs[ix];
-            }
-            int[] dr = {};
+            
+            int[] saveResults = {};
             try {
-            	//TODO: code: execute delete query; check the result and handle success andf failure accordingly
+            	setDataToNativeSink(deletePS, deleteItems);
+            	deletePS.addBatch();
+            	saveResults = deletePS.executeBatch();
+            	deletePS.clearBatch();
+            	
+            	//TODO: code: check result, handle success and failure accordingly
             	deleteItems.clear();
-                return dr;
+                return saveResults;
             } catch (Exception e) { //TODO: catch the correct exception
                 throw new IOException(e);
             }
@@ -344,9 +607,44 @@ final class SnowflakeWriter implements WriterWithFeedback<Result, IndexedRecord,
     private void logout() throws IOException {
         // Finish anything uncommitted
         doInsert();
+        if (null != insertPS) {
+        	try {
+				insertPS.close();
+			} catch (SQLException e) {
+				e.printStackTrace();
+			}
+        }
+        insertSQL = null;
+        
         doDelete();
+        if (null != deletePS) {
+        	try {
+				deletePS.close();
+			} catch (SQLException e) {
+				e.printStackTrace();
+			}
+        }
+        deleteSQL = null;
+
         doUpdate();
+        if (null != updatePS) {
+        	try {
+				updatePS.close();
+			} catch (SQLException e) {
+				e.printStackTrace();
+			}
+        }
+        updateSQL = null;
+
         doUpsert();
+
+        Connection conn = connection.getConnection();
+        try {
+			conn.close();
+		} catch (SQLException e) {
+			e.printStackTrace();
+		}
+        
     }
 
     @Override
