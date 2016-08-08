@@ -21,6 +21,7 @@ import org.talend.components.api.component.runtime.WriteOperation;
 import org.talend.components.api.component.runtime.WriterWithFeedback;
 import org.talend.components.api.container.RuntimeContainer;
 import org.talend.components.api.exception.ComponentException;
+import org.talend.components.snowflake.SnowflakeOutputProperties.OutputAction;
 import org.talend.components.snowflake.connection.SnowflakeNativeConnection;
 import org.talend.components.snowflake.tsnowflakeoutput.TSnowflakeOutputProperties;
 import org.talend.daikon.avro.AvroUtils;
@@ -54,6 +55,7 @@ final class SnowflakeWriter implements WriterWithFeedback<Result, IndexedRecord,
     private PreparedStatement insertPS = null;
 
     protected final List<IndexedRecord> upsertItems;
+    protected final List<IndexedRecord> insertAfterUpdateItems;
 
     protected final List<IndexedRecord> updateItems;
     private String updateSQL = null;
@@ -104,6 +106,7 @@ final class SnowflakeWriter implements WriterWithFeedback<Result, IndexedRecord,
         insertItems = new ArrayList<>(arraySize);
         updateItems = new ArrayList<>(arraySize);
         upsertItems = new ArrayList<>(arraySize);
+        insertAfterUpdateItems = new ArrayList<>(arraySize);
         upsertKeyColumn = "";
         exceptionForErrors = sprops.ceaseForError.getValue();
     }
@@ -202,7 +205,7 @@ final class SnowflakeWriter implements WriterWithFeedback<Result, IndexedRecord,
     	return insertSQL;
     }
     
-    private void setDataToNativeSink(PreparedStatement ps, List<IndexedRecord> inputs) throws SQLException{
+    private void setDataToNativeSink(PreparedStatement ps, List<IndexedRecord> inputs, OutputAction action) throws SQLException{
     	
     	for (IndexedRecord record: inputs) {
     		// Identify the columns and set the data into the preparedstatement
@@ -221,7 +224,7 @@ final class SnowflakeWriter implements WriterWithFeedback<Result, IndexedRecord,
 
     		for (Field f : columns) {
     			
-    			  switch (sprops.outputAction.getValue()) {
+    			  switch (action) {
     		        case INSERT:
     		        	sqlFPos = f.pos();
     		        	break;
@@ -349,6 +352,8 @@ final class SnowflakeWriter implements WriterWithFeedback<Result, IndexedRecord,
     			}
     		}//end fields
     	}//end records
+    	
+    	ps.addBatch();
     }
 
     private int[] doInsert() throws IOException {
@@ -358,13 +363,35 @@ final class SnowflakeWriter implements WriterWithFeedback<Result, IndexedRecord,
             
             int[] saveResults = {};
             try {
-            	setDataToNativeSink(insertPS, insertItems);
-            	insertPS.addBatch();
+            	setDataToNativeSink(insertPS, insertItems, OutputAction.INSERT);
+            	//insertPS.addBatch();
             	saveResults = insertPS.executeBatch();
             	insertPS.clearBatch();
             	
             	//TODO: code: check result, handle success and failure accordingly
             	insertItems.clear();
+                return saveResults;
+            } catch (Exception e) { //TODO: catch the correct exception
+                throw new IOException(e);
+            }
+        }
+        return null;
+    }
+
+    private int[] doInsertForUpsert() throws IOException {
+        if (insertAfterUpdateItems.size() > 0) {
+            // Clean the feedback records at each batch write.
+            cleanFeedbackRecords();
+            
+            int[] saveResults = {};
+            try {
+            	setDataToNativeSink(insertPS, insertAfterUpdateItems, OutputAction.INSERT);
+            	//insertPS.addBatch();
+            	saveResults = insertPS.executeBatch();
+            	insertPS.clearBatch();
+            	
+            	//TODO: code: check result, handle success and failure accordingly
+            	//insertAfterUpdateItems.clear();
                 return saveResults;
             } catch (Exception e) { //TODO: catch the correct exception
                 throw new IOException(e);
@@ -446,8 +473,8 @@ final class SnowflakeWriter implements WriterWithFeedback<Result, IndexedRecord,
             
             int[] saveResults = {};
             try {
-            	setDataToNativeSink(updatePS, updateItems);
-            	updatePS.addBatch();
+            	setDataToNativeSink(updatePS, updateItems, OutputAction.UPDATE);
+            	//updatePS.addBatch();
             	saveResults = updatePS.executeBatch();
             	updatePS.clearBatch();
             	
@@ -460,31 +487,96 @@ final class SnowflakeWriter implements WriterWithFeedback<Result, IndexedRecord,
         }
         return null;
     }
-
-    private int[] upsert(IndexedRecord input) throws IOException {
-        upsertItems.add(input);
-        if (upsertItems.size() >= commitLevel) {
-            return doUpsert();
-        }
-        return null;
-    }
-
-    private int[] doUpsert() throws IOException {
+    
+    private int[] doUpdateForUpsert() throws IOException {
         if (upsertItems.size() > 0) {
             // Clean the feedback records at each batch write.
             cleanFeedbackRecords();
-            //TODO: code: prepare for upsert; check values exist for key columns etc
-            int[] upsertResults = {};
+            
+            int[] saveResults = {};
             try {
-            	//TODO: code: execute update/insert logic
-            	//handle success and failure accordingly
-            	upsertItems.clear();
-                return upsertResults;
+            	setDataToNativeSink(updatePS, upsertItems, OutputAction.UPDATE);
+            	//updatePS.addBatch();
+            	saveResults = updatePS.executeBatch();
+            	updatePS.clearBatch();
+            	
+            	//TODO: code: check result, handle success and failure accordingly
+            	//upsertItems.clear(); //Do not clear now, need to check the update result for attempting insert
+                return saveResults;
             } catch (Exception e) { //TODO: catch the correct exception
                 throw new IOException(e);
             }
         }
         return null;
+    }
+
+    
+    private int[] upsert(IndexedRecord input) throws IOException {
+        
+    	upsertItems.add(input);
+
+        
+        // Update 
+    	if (null == updateSQL || updateSQL.equalsIgnoreCase("")) {
+    		updateSQL = buildUpdateSQL(input);
+    	}
+    	if (null == updatePS) {
+            try {
+            	Connection conn = connection.getConnection();
+            	updatePS = conn.prepareStatement(updateSQL);
+            } catch (Exception e) { //TODO: catch the correct exception
+                throw new IOException(e);
+            }    		
+    	} 	
+        // Insert
+    	if (null == insertSQL || insertSQL.equalsIgnoreCase("")) {
+    		insertSQL = buildInsertSQL(input);
+    	}
+    	if (null == insertPS) {
+            try {
+            	Connection conn = connection.getConnection();
+            	insertPS = conn.prepareStatement(insertSQL);
+            } catch (Exception e) { //TODO: catch the correct exception
+                throw new IOException(e);
+            }    		
+    	} 	
+        
+        if (upsertItems.size() >= commitLevel) {
+        	return doUpsert();
+        }  
+        
+        return null;
+    }
+
+    private int[] doUpsert() throws IOException {
+
+    	int[] upd = {};
+        int[] upsertResult = {};
+    	
+    	if (upsertItems.size() > 0) {
+            // Clean the feedback records at each batch write.
+            cleanFeedbackRecords();
+
+    		//1. Try updating
+    		upd = doUpdateForUpsert();
+        
+    		for (int i = 0; i< upd.length; i++) {
+    			if (upd[i] == 0) {
+    				insertAfterUpdateItems.add(upsertItems.get(i));
+    			}
+    		}
+    		
+    		//2. Insert the failed records
+    		if (insertAfterUpdateItems.size() > 0) {
+    			upsertResult = doInsertForUpsert();
+    		}
+    		
+    		upsertItems.clear();
+    		insertAfterUpdateItems.clear();
+    		
+        }
+        
+    	return upsertResult;
 
     }
 
@@ -583,8 +675,8 @@ final class SnowflakeWriter implements WriterWithFeedback<Result, IndexedRecord,
             
             int[] saveResults = {};
             try {
-            	setDataToNativeSink(deletePS, deleteItems);
-            	deletePS.addBatch();
+            	setDataToNativeSink(deletePS, deleteItems, OutputAction.DELETE);
+            	//deletePS.addBatch();
             	saveResults = deletePS.executeBatch();
             	deletePS.clearBatch();
             	
@@ -606,37 +698,64 @@ final class SnowflakeWriter implements WriterWithFeedback<Result, IndexedRecord,
 
     private void logout() throws IOException {
         // Finish anything uncommitted
-        doInsert();
-        if (null != insertPS) {
-        	try {
-				insertPS.close();
-			} catch (SQLException e) {
-				e.printStackTrace();
-			}
-        }
-        insertSQL = null;
         
-        doDelete();
-        if (null != deletePS) {
-        	try {
-				deletePS.close();
-			} catch (SQLException e) {
-				e.printStackTrace();
-			}
-        }
-        deleteSQL = null;
+        switch (sprops.outputAction.getValue()) {
+        case INSERT:
+        	doInsert();
+            if (null != insertPS) {
+            	try {
+    				insertPS.close();
+    			} catch (SQLException e) {
+    				e.printStackTrace();
+    			}
+            }
+            insertSQL = null;
+            break;
+            
+        case UPDATE:
+            doUpdate();
+            if (null != updatePS) {
+            	try {
+    				updatePS.close();
+    			} catch (SQLException e) {
+    				e.printStackTrace();
+    			}
+            }
+            updateSQL = null;
+            break;
 
-        doUpdate();
-        if (null != updatePS) {
-        	try {
-				updatePS.close();
-			} catch (SQLException e) {
-				e.printStackTrace();
-			}
-        }
-        updateSQL = null;
+        case UPSERT:
+            doUpsert();
+            if (null != updatePS) {
+            	try {
+    				updatePS.close();
+    			} catch (SQLException e) {
+    				e.printStackTrace();
+    			}
+            }
+            if (null != insertPS) {
+            	try {
+    				insertPS.close();
+    			} catch (SQLException e) {
+    				e.printStackTrace();
+    			}
+            }
+            updateSQL = null;
+            insertSQL = null;
+            break;
 
-        doUpsert();
+        case DELETE:
+            doDelete();
+            if (null != deletePS) {
+            	try {
+    				deletePS.close();
+    			} catch (SQLException e) {
+    				e.printStackTrace();
+    			}
+            }
+            deleteSQL = null;
+            break;
+        }
 
         Connection conn = connection.getConnection();
         try {
